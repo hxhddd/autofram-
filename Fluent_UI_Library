@@ -1,5 +1,5 @@
--- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน + ปุ่มลอยสมบูรณ์ (By.HxHDDD v1.9) 🛑 ]]
--- Project: Auto Farm Hub | Version: 1.9 | By.HxHDDD
+-- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน + ปุ่มลอยสมบูรณ์ (By.HxHDDD v2.0) 🛑 ]]
+-- Project: Auto Farm Hub | Version: 2.0 | By.HxHDDD
 
 _G.ButtonConfig = { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2, credit = "By.HxHDDD" }
 
@@ -7,10 +7,10 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 
--- 1. สร้างหน้าต่าง GUI ทันทีในไฟล์นี้
+-- 1. สร้างหน้าต่าง GUI 
 local Window = Fluent:CreateWindow({
     Title = "Auto Farm Hub",
-    SubTitle = "v1.9 | By.HxHDDD",
+    SubTitle = "v2.0 | By.HxHDDD",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
@@ -65,13 +65,21 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- 4. [ฟังก์ชันแกนหลัก] สั่งเปิด/ปิด หน้าต่าง Fluent สลับกันทันทีเมื่อกดคลิกที่ปุ่มลอย 🔮
+-- 4. [แก้ปัญหาพับแล้วเรียกคืนไม่ได้] เจาะระบบค้นหา ScreenGui ของ Fluent และสั่งเปิด/ปิดตรงๆ สลัดปัญหาตัวแปร nil ทิ้งไปเลย
 Button.MouseButton1Click:Connect(function()
-    if Window then
-        Window:Toggle() -- สั่งย่อหน้าต่างลงเมื่อเปิดอยู่ หรือสั่งเรียกหน้าต่างเด้งคืนขึ้นมาเมื่อพับอยู่
+    local FluentGui = CoreGui:FindFirstChild("Fluent")
+    if FluentGui then
+        FluentGui.Enabled = not FluentGui.Enabled
+    else
+        -- ถ้าชื่อเปลี่ยน ให้กวาดหาตัวที่มี CanvasGroup (โครงสร้างของ Fluent) แล้วสลับการแสดงผลทันที
+        for _, gui in ipairs(CoreGui:GetChildren()) do
+            if gui:IsA("ScreenGui") and (gui:FindFirstChild("CanvasGroup") or gui.Name:find("Fluent")) then
+                gui.Enabled = not gui.Enabled
+            end
+        end
     end
 end)
 
 -- 5. ยิงลิงก์ส่งไม้ต่อไปให้สารบัญหลังบ้านทำงานแจกจ่ายปุ่มแท็บ
 local HubIndex = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/index.lua"))()
-HubIndex:BuildTabs(Window, Fluent)
+HubIndex:BuildTabs(Window)
