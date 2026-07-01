@@ -1,26 +1,22 @@
--- [[ 🛑 โซนที่ 1: หน้าบ้านสร้าง GUI และปุ่มลอยสำเร็จรูป (By.HxHDDD v3.1) 🛑 ]]
--- Project: Auto Farm Hub | Version: 3.1 | By.HxHDDD
-
-_G.ButtonConfig = { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2, credit = "By.HxHDDD" }
-_G.AutoFarmRunning = false -- ตัวแปรสากลคุมสถานะเปิด/ปิดบอท
-
+-- [[ 🛑 โซนที่ 2: หน้าบ้านสร้าง GUI และปุ่มลอยสำเร็จรูป (By.HxHDDD v3.2) 🛑 ]]
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
+local Config = _G.ButtonConfig or { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2 }
 
--- 1. สร้างหน้าต่าง GUI
+-- สร้างหน้าต่าง GUI
 local Window = Fluent:CreateWindow({
     Title = "Auto Farm Hub",
-    SubTitle = "v3.1 | By.HxHDDD",
+    SubTitle = "v3.2 | By.HxHDDD",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
     Theme = "Dark"
 })
 
-local Tabs = { Main = Window:AddTab({ Title = "ฟาร์มหลัก", Icon = "home" }) }
+local MainTab = Window:AddTab({ Title = "ฟาร์มหลัก", Icon = "home" })
 
--- 2. สร้างวัตถุปุ่มลอย (🔮) สไตล์โมเดิร์นวงกลมขอบม่วง
+-- สร้างวัตถุปุ่มลอย (🔮) 
 if CoreGui:FindFirstChild("HxHDDD_FloatUI") then CoreGui["HxHDDD_FloatUI"]:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -30,9 +26,9 @@ ScreenGui.Parent = CoreGui
 
 local Button = Instance.new("TextButton")
 Button.Name = "MainButton"
-Button.Text = _G.ButtonConfig.button_text
-Button.Size = UDim2.fromOffset(_G.ButtonConfig.button_size_x, _G.ButtonConfig.button_size_y)
-Button.Position = UDim2.fromScale(_G.ButtonConfig.default_pos_x, _G.ButtonConfig.default_pos_y)
+Button.Text = Config.button_text
+Button.Size = UDim2.fromOffset(Config.button_size_x, Config.button_size_y)
+Button.Position = UDim2.fromScale(Config.default_pos_x, Config.default_pos_y)
 Button.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 Button.TextColor3 = Color3.fromRGB(255, 255, 255)
 Button.Font = Enum.Font.GothamBold
@@ -68,27 +64,15 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- ผูกระบบกดคลิกปุ่มลอยเพื่อ เปิด/ปิด ย่อพับหน้าต่างการันตีใช้งานได้ 100%
+-- ผูกระบบย่อพับหน้าต่าง
 Button.MouseButton1Click:Connect(function()
-    if Window then
-        Window:Toggle()
-    end
+    if Window then Window:Toggle() end
 end)
 
--- 3. สวิตช์ Toggle สั่งเปิด/ปิดตรงๆ โดยส่งค่าไปให้โมเดลฟาร์มหลักทำงาน
-Tabs.Main:AddToggle("AutoCollectToggle", {
+-- สร้างปุ่มสวิตช์และส่งออกไปที่ Global เพื่อให้สคริปต์โหลดหลักนำไปใช้สั่งงานต่อได้
+_G.AutoCollectToggle = MainTab:AddToggle("AutoCollectToggle", {
     Title = "เปิด Auto Collect (กวาดล้างยกแผง)",
-    Default = false,
-    Callback = function(Value)
-        _G.AutoFarmRunning = Value
-        if Value then
-            -- สั่งดาวน์โหลดและรันฟังก์ชันจากโมเดล 1 ทันทีเมื่อเปิดสวิตช์
-            task.spawn(function()
-                local FarmLogic = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/model-1"))()
-                if type(FarmLogic) == "function" then
-                    FarmLogic()
-                end
-            end)
-        end
-    end
+    Default = false
 })
+
+return Window
