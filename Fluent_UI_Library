@@ -1,6 +1,75 @@
--- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน (By.HxHDDD v1.5) 🛑 ]]
+-- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน + ปุ่มลอยสมบูรณ์ (By.HxHDDD v1.8) 🛑 ]]
+-- Project: Auto Farm Hub | Version: 1.8 | By.HxHDDD
+
 _G.ButtonConfig = { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2, credit = "By.HxHDDD" }
 
--- โหลดโมเดลปุ่มลอย (model-0) มารอรับคำสั่งเพื่อความสมบูรณ์
-local StartModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/model-0"))()
-StartModule:Init()
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+
+-- 1. สร้างหน้าต่าง GUI ทันทีในหน้านี้
+local Window = Fluent:CreateWindow({
+    Title = "Auto Farm Hub",
+    SubTitle = "v1.8 | By.HxHDDD",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark"
+})
+
+-- 2. ยุบโมเดล 0 มาสร้างปุ่มลอยตรงนี้ เพื่อให้จับคู่กับตัวแปร Window ได้ 100% แบบไม่เอ๋อ
+if CoreGui:FindFirstChild("HxHDDD_FloatUI") then CoreGui["HxHDDD_FloatUI"]:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "HxHDDD_FloatUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+local Button = Instance.new("TextButton")
+Button.Name = "MainButton"
+Button.Text = _G.ButtonConfig.button_text
+Button.Size = UDim2.fromOffset(_G.ButtonConfig.button_size_x, _G.ButtonConfig.button_size_y)
+Button.Position = UDim2.fromScale(_G.ButtonConfig.default_pos_x, _G.ButtonConfig.default_pos_y)
+Button.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+Button.Font = Enum.Font.GothamBold
+Button.TextSize = 22
+Button.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 50)
+UICorner.Parent = Button
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(138, 43, 226)
+UIStroke.Thickness = 1.5
+UIStroke.Parent = Button
+
+-- ตรรกะลากย้ายปุ่มลอยบนมือถือ
+local dragging, dragInput, dragStart, startPos
+Button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Button.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+    end
+end)
+Button.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        Button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- สั่งเปิด/ปิด ย่อพับหน้าต่างตรงๆ การันตีทำงานแน่นอนเพราะอยู่ไฟล์เดียวกัน
+Button.MouseButton1Click:Connect(function()
+    Window:Toggle()
+end)
+
+-- 3. ส่งไม้ต่อไปให้สารบัญหลังบ้านทำงานต่อ โดยโยนก้อนวัตถุ Window และ Tabs ไปให้จัดการสร้างปุ่มข้างในต่อ
+local HubIndex = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/index.lua"))()
+HubIndex:BuildTabs(Window, Fluent)
