@@ -1,20 +1,20 @@
--- [[ 🛑 โซนที่ 2: Hub Index ศูนย์ควบคุมหลังบ้าน (By.HxHDDD v1.2) 🛑 ]]
+-- [[ 🛑 โซนที่ 2: Hub Index ศูนย์ควบคุมหลังบ้าน (By.HxHDDD v1.3) 🛑 ]]
 local Hub = {}
 
--- โลาดไลบรารี Fluent UI ของจริงมาสแตนด์บายที่ไฟล์นี้
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
 
--- สารบัญรายชื่อโมเดลทั้งหมดในโปรเจกต์ (อนาคตมี model-2, model-3 ก็มาเติมตรงนี้)
+-- สารบัญรายชื่อโมเดลทั้งหมดในโปรเจกต์
 local Modules = {
     AutoCollector = "https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/model-1"
 }
 
 function Hub:Init()
-    -- 1. สร้างหน้าต่าง GUI สไตล์โมเดิร์น ขอบโค้งมน ใส่เครดิต By.HxHDDD และเวอร์ชัน
+    -- 1. สร้างหน้าต่าง GUI สไตล์โมเดิร์น ขอบโค้งมน
     local Window = Fluent:CreateWindow({
         Title = "Auto Farm Hub",
-        SubTitle = "v1.2 | By.HxHDDD",
+        SubTitle = "v1.3 | By.HxHDDD",
         TabWidth = 160,
         Size = UDim2.fromOffset(580, 460),
         Acrylic = true,
@@ -36,19 +36,68 @@ function Hub:Init()
         end
     })
 
-    -- 4. ดึงค่าคอนฟิกจากหน้าบ้านมาเสกปุ่มลอยย่อพับอัตโนมัติร่วมกับ Fluent UI
-    local Config = _G.ButtonConfig or { button_text = "🔮" }
-    Window:MinimizeSettings({
-        ChangesText = Config.button_text,
-        Color = Color3.fromRGB(30, 30, 35),
-        CornerRadius = UDim.new(0, 50) -- ขอบโค้งมนวงกลม
-    })
+    -- 4. ตรรกะเสกปุ่มลอย (🔮) สไตล์โมเดิร์นวงกลม By.HxHDDD (รองรับมือถือ 100%)
+    local Config = _G.ButtonConfig or { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2 }
     
-    -- ล็อกพิกัดตำแหน่งปุ่มลอยบนหน้าจอมือถือตามที่ตั้งค่าไว้
-    local MinimizeButton = CoreGui:FindFirstChild("MinimizeButton", true)
-    if MinimizeButton then
-        MinimizeButton.Position = UDim2.fromScale(Config.default_pos_x or 0.05, Config.default_pos_y or 0.2)
+    -- ลบปุ่มเก่าทิ้งหากรันซ้ำ
+    if CoreGui:FindFirstChild("HxHDDD_FloatUI") then
+        CoreGui["HxHDDD_FloatUI"]:Destroy()
     end
+    
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "HxHDDD_FloatUI"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = CoreGui
+    
+    local Button = Instance.new("TextButton")
+    Button.Name = "MainButton"
+    Button.Text = Config.button_text
+    Button.Size = UDim2.fromOffset(Config.button_size_x, Config.button_size_y)
+    Button.Position = UDim2.fromScale(Config.default_pos_x, Config.default_pos_y)
+    Button.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.Font = Enum.Font.GothamBold
+    Button.TextSize = 22
+    Button.Parent = ScreenGui
+    
+    -- ใส่ขอบโค้งมนให้กลมดิ๊กและขอบม่วงคริสตัล
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 50)
+    UICorner.Parent = Button
+    
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Color3.fromRGB(138, 43, 226)
+    UIStroke.Thickness = 1.5
+    UIStroke.Parent = Button
+
+    -- ตรรกะรองรับการลากย้ายปุ่มไปมาบนจอมือถือได้อย่างอิสระ
+    local dragging, dragInput, dragStart, startPos
+    Button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = Button.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    Button.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            Button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    -- เมื่อคลิกปุ่มลอย จะไปสั่งย่อ/พับหน้าต่าง Fluent UI ทันที
+    Button.MouseButton1Click:Connect(function()
+        Window:Toggle()
+    end)
 end
 
 return Hub
