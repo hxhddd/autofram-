@@ -1,0 +1,7 @@
+-- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน (By.HxHDDD) 🛑 ]]
+_G.PastebinRawUrl = "https://pastebin.com/raw/9vk160L8" -- ลิงก์ระบบปุ่มลอยสำเร็จรูป & คอนฟิก
+local MainLogic = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/model-1"))()
+
+-- สั่งรันระบบกวาดของจากหลังบ้านทันทีเมื่อเปิดใช้สคริปต์
+local Collector = MainLogic.new()
+Collector:Start()
