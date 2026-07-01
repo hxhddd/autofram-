@@ -1,0 +1,22 @@
+-- [[ 🛑 โซนที่ 1: ตัวโหลดรวมร่างแนวราบและคุมลูปหลัก (By.HxHDDD v3.2) 🛑 ]]
+-- Project: Auto Farm Hub | Version: 3.2 | By.HxHDDD
+
+_G.ButtonConfig = { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2, credit = "By.HxHDDD" }
+_G.AutoFarmRunning = false -- ตัวแปรสากลแผ่นเดียวกันสำหรับคุมลูปหลัก
+
+-- 1. ดาวน์โหลดสคริปต์หน้าบ้านและหลังบ้านมากองรวมกันใน Environment เดียวกัน
+local FluentUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Fluent_UI_Library"))()
+local FarmLogic = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/model-1"))()
+
+-- 2. ดักจับและซ่อมแซมปุ่มสวิตช์ Toggle บนหน้าต่าง Fluent UI ให้สั่งงานตรงสาย
+-- (ตรรกะนี้จะวิ่งไปเคลียร์และผูกคำสั่ง Callback ของปุ่มเปิด-ปิดหน้าบ้านให้มาคุมตัวแปรลูปโดยตรง)
+if _G.AutoCollectToggle then
+    _G.AutoCollectToggle:OnChanged(function(Value)
+        _G.AutoFarmRunning = Value
+        if Value and type(FarmLogic) == "function" then
+            task.spawn(function()
+                FarmLogic() -- เรียกตัวฟังก์ชันลูปทำงานทันทีเมื่อเปิดสวิตช์
+            end)
+        end
+    end)
+end
