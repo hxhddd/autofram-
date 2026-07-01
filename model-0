@@ -1,6 +1,5 @@
--- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน (By.HxHDDD v1.1) 🛑 ]]
-_G.PastebinRawUrl = "https://pastebin.com/raw/9vk160L8" -- ลิงก์ดึงปุ่มลอยสำเร็จรูป
+-- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน (By.HxHDDD v1.2) 🛑 ]]
+_G.ButtonConfig = { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2, credit = "By.HxHDDD" }
 
--- วิ่งไปเรียกเปิดระบบที่ตัวควบคุมสารบัญ (index.lua) ข้างในโฟลเดอร์โดยตรง
 local MainHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/index.lua"))()
 MainHub:Init()
