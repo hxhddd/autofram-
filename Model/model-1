@@ -1,0 +1,99 @@
+-- [[ 🛑 โซนที่ 2: Main Logic หลังบ้าน (By.HxHDDD v1.1) 🛑 ]]
+local AutoCollector = {}
+AutoCollector.__index = AutoCollector
+
+local ProximityPromptService = game:GetService("ProximityPromptService")
+
+function AutoCollector.new()
+    local self = setmetatable({}, AutoCollector)
+    
+    self.IsRunning = false
+    self.Thread = nil
+    
+    -- คำสำคัญสำหรับกรอง ActionText ดั้งเดิมของคุณ
+    self.Keywords = { "collect", "take", "harvest" }
+    
+    -- คำค้นหาชื่อ Parent หรือบรรพบุรุษ (ปรับปรุงตาม Path จริงที่คุณให้มา)
+    self.TargetNames = { "Tree", "Egg", "Food", "Mob", "Client", "FoodTreeCheck", "Eggs" }
+    
+    return self
+end
+
+-- ตรรกะการตรวจสอบความถูกต้อง (ดึงจุดเด่นจากสคริปต์เดิม + ป้องกันบั๊ก Path)
+function AutoCollector:ShouldInteract(prompt)
+    if not prompt or not prompt.Enabled then return false end
+    
+    local parent = prompt.Parent
+    if not parent then return false end
+    
+    local parentName = parent.Name
+    local actionText = prompt.ActionText:lower()
+    
+    -- 1. กรองจากชื่อ Parent ตรงๆ หรือตรวจสอบขึ้นไปหาโฟลเดอร์หลัก (เพื่อจับกลุ่ม Eggs.Client และ FoodTreeCheck)
+    for _, target in ipairs(self.TargetNames) do
+        if parentName:find(target) or parent:FindFirstAncestor(target) then
+            return true
+        end
+    end
+    
+    -- 2. กรองจาก ActionText เผื่อไว้กรณีชื่อโมเดลเปลี่ยน
+    for _, keyword in ipairs(self.Keywords) do
+        if actionText:find(keyword) then
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- ฟังก์ชันลูปหลัก: กวาดเรียบยกแผงในเฟรมเดียวแบบดั้งเดิม
+function AutoCollector:Collect()
+    while self.IsRunning do
+        local found = false
+        
+        -- กวาดดึง ProximityPrompt ทั้งหมดที่มีในแมพมาเป็น Array ทันที
+        local allPrompts = ProximityPromptService:GetProximityPrompts()
+        
+        -- ใช้ลูปกวาดรวดเดียวรัวๆ ทุกตัวที่ตรงเงื่อนไขในรอบเดียวก่อนขึ้นดีเลย์
+        for _, prompt in ipairs(allPrompts) do
+            if self:ShouldInteract(prompt) then
+                pcall(function()
+                    fireproximityprompt(prompt, 0) -- กดทันที 0 ดีเลย์
+                end)
+                found = true
+            end
+        end
+        
+        -- ปรับจังหวะความเร็วตามลอจิกเดิมของคุณเพื่อความเสถียร
+        if not found then
+            task.wait(0.5) -- พักถ้ากวาดแล้วไม่เจออะไร
+        else
+            task.wait(0.1) -- ขยับลูปกวาดต่อทันทีถ้ายังเจอของสุ่มเกิดใหม่
+        end
+    end
+end
+
+-- สวิตช์เปิดการทำงาน
+function AutoCollector:Start()
+    if self.IsRunning then return end
+    self.IsRunning = true
+    
+    self.Thread = task.spawn(function()
+        self:Collect()
+    end)
+    print("🚀 [By.HxHDDD] AutoCollector เริ่มทำงานระบบกวาดล้างแล้ว")
+end
+
+-- สวิตช์ปิดการทำงาน
+function AutoCollector:Stop()
+    if not self.IsRunning then return end
+    self.IsRunning = false
+    
+    if self.Thread then
+        task.cancel(self.Thread)
+        self.Thread = nil
+    end
+    print("⛔ [By.HxHDDD] AutoCollector หยุดทำงาน")
+end
+
+return AutoCollector
