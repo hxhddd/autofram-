@@ -1,0 +1,28 @@
+-- [[ 🛑 โซนที่ 1: One-Line Loader & GUI Setup (By.HxHDDD v1.1) 🛑 ]]
+-- Project: Auto Farm Collector | Version: 1.1 | By.HxHDDD
+
+_G.PastebinRawUrl = "https://pastebin.com/raw/9vk160L8" -- ลิงก์ระบบปุ่มลอยสำเร็จรูป (🔮)
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local MainLogic = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/model-1"))()
+
+-- สร้างหน้าต่าง GUI สไตล์โมเดิร์น ขอบโค้ง
+local Window = Fluent:CreateWindow({
+    Title = "Auto Collector",
+    SubTitle = "By.HxHDDD",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark"
+})
+
+local Tabs = { Main = Window:AddTab({ Title = "ฟาร์มหลัก", Icon = "home" }) }
+local Collector = MainLogic.new()
+
+-- ปุ่มสวิตช์ Toggle ควบคุมตรรกะหลังบ้าน
+Tabs.Main:AddToggle("AutoCollect", {
+    Title = "เปิด Auto Collect (กวาดล้างยกแผง)",
+    Default = false,
+    Callback = function(Value)
+        if Value then Collector:Start() else Collector:Stop() end
+    end
+})
