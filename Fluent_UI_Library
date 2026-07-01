@@ -1,16 +1,5 @@
--- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน (By.HxHDDD v1.2) 🛑 ]]
--- Project: Auto Farm Hub | Version: 1.2 | By.HxHDDD
+-- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน (By.HxHDDD v1.4) 🛑 ]]
+_G.ButtonConfig = { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2, credit = "By.HxHDDD" }
 
--- 1. ฝังคอนฟิกปุ่มลอย (🔮) ไว้ในตัวแปร Global เพื่อให้หลังบ้านดึงไปใช้เสกปุ่มได้ทันที ไม่หน่วงเครื่อง
-_G.ButtonConfig = { 
-    button_text = "🔮", 
-    button_size_x = 50, 
-    button_size_y = 50, 
-    default_pos_x = 0.05, 
-    default_pos_y = 0.2, 
-    credit = "By.HxHDDD" 
-}
-
--- 2. ยิงลิงก์ตรงเข้าไปปลุกศูนย์ควบคุมหลังบ้าน (index.lua) ให้ทำงาน
 local MainHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/index.lua"))()
 MainHub:Init()
