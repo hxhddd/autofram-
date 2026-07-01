@@ -1,5 +1,5 @@
--- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน + ปุ่มลอยสมบูรณ์ (By.HxHDDD v1.8) 🛑 ]]
--- Project: Auto Farm Hub | Version: 1.8 | By.HxHDDD
+-- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน + ปุ่มลอยสมบูรณ์ (By.HxHDDD v1.9) 🛑 ]]
+-- Project: Auto Farm Hub | Version: 1.9 | By.HxHDDD
 
 _G.ButtonConfig = { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2, credit = "By.HxHDDD" }
 
@@ -7,17 +7,17 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 
--- 1. สร้างหน้าต่าง GUI ทันทีในหน้านี้
+-- 1. สร้างหน้าต่าง GUI ทันทีในไฟล์นี้
 local Window = Fluent:CreateWindow({
     Title = "Auto Farm Hub",
-    SubTitle = "v1.8 | By.HxHDDD",
+    SubTitle = "v1.9 | By.HxHDDD",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
     Theme = "Dark"
 })
 
--- 2. ยุบโมเดล 0 มาสร้างปุ่มลอยตรงนี้ เพื่อให้จับคู่กับตัวแปร Window ได้ 100% แบบไม่เอ๋อ
+-- 2. สร้างวัตถุปุ่มลอย (🔮) สไตล์โมเดิร์นวงกลมขอบม่วง
 if CoreGui:FindFirstChild("HxHDDD_FloatUI") then CoreGui["HxHDDD_FloatUI"]:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -45,7 +45,7 @@ UIStroke.Color = Color3.fromRGB(138, 43, 226)
 UIStroke.Thickness = 1.5
 UIStroke.Parent = Button
 
--- ตรรกะลากย้ายปุ่มลอยบนมือถือ
+-- 3. [ระบบลากย้าย] ควบคุมการลากตำแหน่งปุ่มลอยบนจอมือถือ
 local dragging, dragInput, dragStart, startPos
 Button.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -65,11 +65,13 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- สั่งเปิด/ปิด ย่อพับหน้าต่างตรงๆ การันตีทำงานแน่นอนเพราะอยู่ไฟล์เดียวกัน
+-- 4. [ฟังก์ชันแกนหลัก] สั่งเปิด/ปิด หน้าต่าง Fluent สลับกันทันทีเมื่อกดคลิกที่ปุ่มลอย 🔮
 Button.MouseButton1Click:Connect(function()
-    Window:Toggle()
+    if Window then
+        Window:Toggle() -- สั่งย่อหน้าต่างลงเมื่อเปิดอยู่ หรือสั่งเรียกหน้าต่างเด้งคืนขึ้นมาเมื่อพับอยู่
+    end
 end)
 
--- 3. ส่งไม้ต่อไปให้สารบัญหลังบ้านทำงานต่อ โดยโยนก้อนวัตถุ Window และ Tabs ไปให้จัดการสร้างปุ่มข้างในต่อ
+-- 5. ยิงลิงก์ส่งไม้ต่อไปให้สารบัญหลังบ้านทำงานแจกจ่ายปุ่มแท็บ
 local HubIndex = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/index.lua"))()
 HubIndex:BuildTabs(Window, Fluent)
