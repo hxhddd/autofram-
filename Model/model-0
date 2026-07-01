@@ -1,4 +1,4 @@
--- [[ 🛑 โซนที่ 2.5: โมเดลปุ่มลอยควบคุมระบบย่อพับ (By.HxHDDD v1.5) 🛑 ]]
+-- [[ 🛑 โซนที่ 2.5: โมเดลปุ่มลอยควบคุมระบบย่อพับ (By.HxHDDD v1.6) 🛑 ]]
 local FloatingModel = {}
 
 function FloatingModel:Init()
@@ -6,11 +6,11 @@ function FloatingModel:Init()
     local UserInputService = game:GetService("UserInputService")
     local Config = _G.ButtonConfig or { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2 }
 
-    -- 1. เรียกให้ศูนย์กลางหลังบ้าน (index.lua) สร้างหน้าต่างขึ้นมา และส่งค่าหน้าต่างกลับมาเก็บไว้ที่นี่
+    -- 1. สั่งปลุก index.lua ให้เคลียร์หน้าต่างและส่งค่ากลับมา
     local HubIndex = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/index.lua"))()
-    local FluentWindow = HubIndex:StartGui() -- รับค่า Window กลับมาถือไว้
+    local FluentWindow = HubIndex:StartGui()
 
-    -- 2. สร้างวัตถุปุ่มลอย (🔮) สไตล์โมเดิร์น By.HxHDDD
+    -- 2. เสกสร้างปุ่มลอยสำเร็จรูป By.HxHDDD
     if CoreGui:FindFirstChild("HxHDDD_FloatUI") then CoreGui["HxHDDD_FloatUI"]:Destroy() end
     
     local ScreenGui = Instance.new("ScreenGui")
@@ -38,7 +38,7 @@ function FloatingModel:Init()
     UIStroke.Thickness = 1.5
     UIStroke.Parent = Button
 
-    -- ตรรกะลากย้ายปุ่มลอยสำหรับมือถือ
+    -- ระบบควบคุมการลากย้ายตำแหน่งปุ่มบนจอมือถืออย่างอิสระ
     local dragging, dragInput, dragStart, startPos
     Button.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -58,10 +58,14 @@ function FloatingModel:Init()
         end
     end)
     
-    -- แก้ปัญหาที่ 1: ผูกคำสั่งเมื่อคลิกปุ่มลอย ให้ไปเรียกใช้งานสวิตช์ย่อพับของ Fluent ทันที
+    -- แก้ปัญหาที่ 2: สั่ง Toggle หน้าต่างตรงๆ ผ่าน Instance ที่ส่งกลับมาแบบ Realtime
     Button.MouseButton1Click:Connect(function()
         if FluentWindow then
             FluentWindow:Toggle()
+        else
+            -- หากเกิดกรณีหลุดดีเลย์ ให้ดึงหน้าต่างมาตรฐานที่หลบอยู่ในเครื่องขึ้นมาทันที
+            local MainGui = CoreGui:FindFirstChild("Fluent") or CoreGui:FindFirstChild("ScreenGui")
+            if MainGui then MainGui.Enabled = not MainGui.Enabled end
         end
     end)
 end
