@@ -10,10 +10,10 @@ function AutoCollector.new()
     self.IsRunning = false
     self.Thread = nil
     
-    -- คำสำคัญสำหรับกรอง ActionText ดั้งเดิมของคุณ
+    -- คำสำคัญสำหรับกรอง ActionText ดั้งเดิม
     self.Keywords = { "collect", "take", "harvest" }
     
-    -- คำค้นหาชื่อ Parent หรือบรรพบุรุษ (ปรับปรุงตาม Path จริงที่คุณให้มา)
+    -- คำค้นหาชื่อ Parent หรือบรรพบุรุษ (กรองตามโครงสร้างแมพจริง)
     self.TargetNames = { "Tree", "Egg", "Food", "Mob", "Client", "FoodTreeCheck", "Eggs" }
     
     return self
@@ -29,14 +29,14 @@ function AutoCollector:ShouldInteract(prompt)
     local parentName = parent.Name
     local actionText = prompt.ActionText:lower()
     
-    -- 1. กรองจากชื่อ Parent ตรงๆ หรือตรวจสอบขึ้นไปหาโฟลเดอร์หลัก (เพื่อจับกลุ่ม Eggs.Client และ FoodTreeCheck)
+    -- 1. ตรวจสอบขึ้นไปหาโฟลเดอร์หลัก (เพื่อจับกลุ่ม Eggs.Client และ FoodTreeCheck)
     for _, target in ipairs(self.TargetNames) do
         if parentName:find(target) or parent:FindFirstAncestor(target) then
             return true
         end
     end
     
-    -- 2. กรองจาก ActionText เผื่อไว้กรณีชื่อโมเดลเปลี่ยน
+    -- 2. กรองจาก ActionText เผื่อไว้กรณีทั่วไป
     for _, keyword in ipairs(self.Keywords) do
         if actionText:find(keyword) then
             return true
@@ -46,15 +46,15 @@ function AutoCollector:ShouldInteract(prompt)
     return false
 end
 
--- ฟังก์ชันลูปหลัก: กวาดเรียบยกแผงในเฟรมเดียวแบบดั้งเดิม
+-- ฟังก์ชันลูปหลัก: กวาดเรียบยกแผงในเฟรมเดียวแบบรวดเร็ว
 function AutoCollector:Collect()
     while self.IsRunning do
         local found = false
         
-        -- กวาดดึง ProximityPrompt ทั้งหมดที่มีในแมพมาเป็น Array ทันที
+        -- กวาดดึง ProximityPrompt ทั้งหมดที่มีในแมพมาพร้อมกันทันที
         local allPrompts = ProximityPromptService:GetProximityPrompts()
         
-        -- ใช้ลูปกวาดรวดเดียวรัวๆ ทุกตัวที่ตรงเงื่อนไขในรอบเดียวก่อนขึ้นดีเลย์
+        -- ลูปกวาดรวดเดียวรัวๆ ทุกตัวที่ตรงเงื่อนไขในรอบเดียวโดยไม่มีดีเลย์คั่นระหว่างตัว
         for _, prompt in ipairs(allPrompts) do
             if self:ShouldInteract(prompt) then
                 pcall(function()
@@ -64,11 +64,11 @@ function AutoCollector:Collect()
             end
         end
         
-        -- ปรับจังหวะความเร็วตามลอจิกเดิมของคุณเพื่อความเสถียร
+        -- ดีเลย์ควบคุมจังหวะลูปหลักตามสคริปต์เดิม
         if not found then
-            task.wait(0.5) -- พักถ้ากวาดแล้วไม่เจออะไร
+            task.wait(0.5) -- พักเมื่อกวาดแล้วไม่เจออะไร
         else
-            task.wait(0.1) -- ขยับลูปกวาดต่อทันทีถ้ายังเจอของสุ่มเกิดใหม่
+            task.wait(0.1) -- ขยับลูปกวาดต่อทันทีหากยังมีของสุ่มเกิดเหลืออยู่
         end
     end
 end
