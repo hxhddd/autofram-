@@ -1,4 +1,4 @@
--- [[ 🛑 โซนที่ 2.5: โมเดลปุ่มลอยควบคุมระบบย่อพับ (By.HxHDDD v1.6) 🛑 ]]
+-- [[ 🛑 โซนที่ 2.5: โมเดลปุ่มลอยควบคุมระบบย่อพับ (By.HxHDDD v1.7) 🛑 ]]
 local FloatingModel = {}
 
 function FloatingModel:Init()
@@ -58,14 +58,16 @@ function FloatingModel:Init()
         end
     end)
     
-    -- แก้ปัญหาที่ 2: สั่ง Toggle หน้าต่างตรงๆ ผ่าน Instance ที่ส่งกลับมาแบบ Realtime
+    -- แก้ไขปัญหาเรียกหน้าต่างคืน: ค้นหา UI จริงของ Fluent จากรากฐานระบบเพื่อสั่งปิดเปิดชัวร์ๆ 100%
     Button.MouseButton1Click:Connect(function()
         if FluentWindow then
             FluentWindow:Toggle()
         else
-            -- หากเกิดกรณีหลุดดีเลย์ ให้ดึงหน้าต่างมาตรฐานที่หลบอยู่ในเครื่องขึ้นมาทันที
-            local MainGui = CoreGui:FindFirstChild("Fluent") or CoreGui:FindFirstChild("ScreenGui")
-            if MainGui then MainGui.Enabled = not MainGui.Enabled end
+            for _, gui in ipairs(CoreGui:GetChildren()) do
+                if gui:IsA("ScreenGui") and gui:FindFirstChild("CanvasGroup") then
+                    gui.Enabled = not gui.Enabled
+                end
+            end
         end
     end)
 end
