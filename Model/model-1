@@ -1,26 +1,12 @@
--- [[ 🛑 โซนที่ 2: Main Logic หลังบ้าน (By.HxHDDD v1.1) 🛑 ]]
-local AutoCollector = {}
-AutoCollector.__index = AutoCollector
-
+-- [[ 🛑 โซนที่ 2: Logic ฟาร์มหลักแบบฟังก์ชันคลีน (By.HxHDDD v3.1) 🛑 ]]
 local ProximityPromptService = game:GetService("ProximityPromptService")
 
-function AutoCollector.new()
-    local self = setmetatable({}, AutoCollector)
-    
-    self.IsRunning = false
-    self.Thread = nil
-    
-    -- คำสำคัญสำหรับกรอง ActionText ดั้งเดิม
-    self.Keywords = { "collect", "take", "harvest" }
-    
-    -- คำค้นหาชื่อ Parent หรือบรรพบุรุษ (กรองตามโครงสร้างแมพจริง)
-    self.TargetNames = { "Tree", "Egg", "Food", "Mob", "Client", "FoodTreeCheck", "Eggs" }
-    
-    return self
-end
+-- ค่าคอนฟิกสำหรับกรองเป้าหมาย
+local Keywords = { "collect", "take", "harvest" }
+local TargetNames = { "Tree", "Egg", "Food", "Mob", "Client", "FoodTreeCheck", "Eggs" }
 
--- ตรรกะการตรวจสอบความถูกต้อง (ดึงจุดเด่นจากสคริปต์เดิม + ป้องกันบั๊ก Path)
-function AutoCollector:ShouldInteract(prompt)
+-- ฟังก์ชันตรวจสอบความถูกต้องของเงื่อนไข
+local function ShouldInteract(prompt)
     if not prompt or not prompt.Enabled then return false end
     
     local parent = prompt.Parent
@@ -29,15 +15,13 @@ function AutoCollector:ShouldInteract(prompt)
     local parentName = parent.Name
     local actionText = prompt.ActionText:lower()
     
-    -- 1. ตรวจสอบขึ้นไปหาโฟลเดอร์หลัก (เพื่อจับกลุ่ม Eggs.Client และ FoodTreeCheck)
-    for _, target in ipairs(self.TargetNames) do
+    for _, target in ipairs(TargetNames) do
         if parentName:find(target) or parent:FindFirstAncestor(target) then
             return true
         end
     end
     
-    -- 2. กรองจาก ActionText เผื่อไว้กรณีทั่วไป
-    for _, keyword in ipairs(self.Keywords) do
+    for _, keyword in ipairs(Keywords) do
         if actionText:find(keyword) then
             return true
         end
@@ -46,54 +30,30 @@ function AutoCollector:ShouldInteract(prompt)
     return false
 end
 
--- ฟังก์ชันลูปหลัก: กวาดเรียบยกแผงในเฟรมเดียวแบบรวดเร็ว
-function AutoCollector:Collect()
-    while self.IsRunning do
+-- ส่งฟังก์ชันลูปหลักออกไปทำงานเมื่อถูกเรียกใช้งาน
+return function()
+    print("🚀 [By.HxHDDD] AutoCollector เริ่มทำงานระบบกวาดล้างแล้ว")
+    
+    while _G.AutoFarmRunning do
         local found = false
-        
-        -- กวาดดึง ProximityPrompt ทั้งหมดที่มีในแมพมาพร้อมกันทันที
         local allPrompts = ProximityPromptService:GetProximityPrompts()
         
-        -- ลูปกวาดรวดเดียวรัวๆ ทุกตัวที่ตรงเงื่อนไขในรอบเดียวโดยไม่มีดีเลย์คั่นระหว่างตัว
         for _, prompt in ipairs(allPrompts) do
-            if self:ShouldInteract(prompt) then
+            if ShouldInteract(prompt) then
+                if not _G.AutoFarmRunning then break end -- หยุดทันทีถ้าสวิตช์ปิดกลางคัน
                 pcall(function()
-                    fireproximityprompt(prompt, 0) -- กดทันที 0 ดีเลย์
+                    fireproximityprompt(prompt, 0)
                 end)
                 found = true
             end
         end
         
-        -- ดีเลย์ควบคุมจังหวะลูปหลักตามสคริปต์เดิม
         if not found then
-            task.wait(0.5) -- พักเมื่อกวาดแล้วไม่เจออะไร
+            task.wait(0.5)
         else
-            task.wait(0.1) -- ขยับลูปกวาดต่อทันทีหากยังมีของสุ่มเกิดเหลืออยู่
+            task.wait(0.1)
         end
     end
-end
-
--- สวิตช์เปิดการทำงาน
-function AutoCollector:Start()
-    if self.IsRunning then return end
-    self.IsRunning = true
     
-    self.Thread = task.spawn(function()
-        self:Collect()
-    end)
-    print("🚀 [By.HxHDDD] AutoCollector เริ่มทำงานระบบกวาดล้างแล้ว")
-end
-
--- สวิตช์ปิดการทำงาน
-function AutoCollector:Stop()
-    if not self.IsRunning then return end
-    self.IsRunning = false
-    
-    if self.Thread then
-        task.cancel(self.Thread)
-        self.Thread = nil
-    end
     print("⛔ [By.HxHDDD] AutoCollector หยุดทำงาน")
 end
-
-return AutoCollector
