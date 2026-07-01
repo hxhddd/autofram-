@@ -1,0 +1,70 @@
+-- [[ 🛑 โซนที่ 2.5: โมเดลปุ่มลอยสำเร็จรูปในโฟลเดอร์ (By.HxHDDD v1.4) 🛑 ]]
+local FloatingButtonModel = {}
+
+function FloatingButtonModel:Create(WindowInstance)
+    local CoreGui = game:GetService("CoreGui")
+    local UserInputService = game:GetService("UserInputService")
+    local Config = _G.ButtonConfig or { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2 }
+
+    if CoreGui:FindFirstChild("HxHDDD_FloatUI") then
+        CoreGui["HxHDDD_FloatUI"]:Destroy()
+    end
+
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "HxHDDD_FloatUI"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = CoreGui
+
+    local Button = Instance.new("TextButton")
+    Button.Name = "MainButton"
+    Button.Text = Config.button_text
+    Button.Size = UDim2.fromOffset(Config.button_size_x, Config.button_size_y)
+    Button.Position = UDim2.fromScale(Config.default_pos_x, Config.default_pos_y)
+    Button.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.Font = Enum.Font.GothamBold
+    Button.TextSize = 22
+    Button.Parent = ScreenGui
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 50)
+    UICorner.Parent = Button
+
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Color3.fromRGB(138, 43, 226)
+    UIStroke.Thickness = 1.5
+    UIStroke.Parent = Button
+
+    -- ตรรกะควบคุมการลากย้ายปุ่มลอยบนมือถือ
+    local dragging, dragInput, dragStart, startPos
+    Button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = Button.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    Button.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            Button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    -- สั่ง เปิด/ปิด หน้าต่างหลักเมื่อกดคลิก
+    Button.MouseButton1Click:Connect(function()
+        if WindowInstance then
+            WindowInstance:Toggle()
+        end
+    end)
+end
+
+return FloatingButtonModel
