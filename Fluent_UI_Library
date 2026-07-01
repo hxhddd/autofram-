@@ -1,5 +1,6 @@
--- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน (By.HxHDDD v1.4) 🛑 ]]
+-- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน (By.HxHDDD v1.5) 🛑 ]]
 _G.ButtonConfig = { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2, credit = "By.HxHDDD" }
 
-local MainHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/index.lua"))()
-MainHub:Init()
+-- โหลดโมเดลปุ่มลอย (model-0) มารอรับคำสั่งเพื่อความสมบูรณ์
+local StartModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/model-0"))()
+StartModule:Init()
