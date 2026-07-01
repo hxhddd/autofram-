@@ -1,20 +1,23 @@
--- [[ 🛑 โซนที่ 2.5: โมเดลปุ่มลอยสำเร็จรูปในโฟลเดอร์ (By.HxHDDD v1.4) 🛑 ]]
-local FloatingButtonModel = {}
+-- [[ 🛑 โซนที่ 2.5: โมเดลปุ่มลอยควบคุมระบบย่อพับ (By.HxHDDD v1.5) 🛑 ]]
+local FloatingModel = {}
 
-function FloatingButtonModel:Create(WindowInstance)
+function FloatingModel:Init()
     local CoreGui = game:GetService("CoreGui")
     local UserInputService = game:GetService("UserInputService")
     local Config = _G.ButtonConfig or { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2 }
 
-    if CoreGui:FindFirstChild("HxHDDD_FloatUI") then
-        CoreGui["HxHDDD_FloatUI"]:Destroy()
-    end
+    -- 1. เรียกให้ศูนย์กลางหลังบ้าน (index.lua) สร้างหน้าต่างขึ้นมา และส่งค่าหน้าต่างกลับมาเก็บไว้ที่นี่
+    local HubIndex = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/index.lua"))()
+    local FluentWindow = HubIndex:StartGui() -- รับค่า Window กลับมาถือไว้
 
+    -- 2. สร้างวัตถุปุ่มลอย (🔮) สไตล์โมเดิร์น By.HxHDDD
+    if CoreGui:FindFirstChild("HxHDDD_FloatUI") then CoreGui["HxHDDD_FloatUI"]:Destroy() end
+    
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "HxHDDD_FloatUI"
     ScreenGui.ResetOnSpawn = false
     ScreenGui.Parent = CoreGui
-
+    
     local Button = Instance.new("TextButton")
     Button.Name = "MainButton"
     Button.Text = Config.button_text
@@ -25,32 +28,28 @@ function FloatingButtonModel:Create(WindowInstance)
     Button.Font = Enum.Font.GothamBold
     Button.TextSize = 22
     Button.Parent = ScreenGui
-
+    
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 50)
     UICorner.Parent = Button
-
+    
     local UIStroke = Instance.new("UIStroke")
     UIStroke.Color = Color3.fromRGB(138, 43, 226)
     UIStroke.Thickness = 1.5
     UIStroke.Parent = Button
 
-    -- ตรรกะควบคุมการลากย้ายปุ่มลอยบนมือถือ
+    -- ตรรกะลากย้ายปุ่มลอยสำหรับมือถือ
     local dragging, dragInput, dragStart, startPos
     Button.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = Button.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
+            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
         end
     end)
     Button.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
     end)
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
@@ -58,13 +57,13 @@ function FloatingButtonModel:Create(WindowInstance)
             Button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
-
-    -- สั่ง เปิด/ปิด หน้าต่างหลักเมื่อกดคลิก
+    
+    -- แก้ปัญหาที่ 1: ผูกคำสั่งเมื่อคลิกปุ่มลอย ให้ไปเรียกใช้งานสวิตช์ย่อพับของ Fluent ทันที
     Button.MouseButton1Click:Connect(function()
-        if WindowInstance then
-            WindowInstance:Toggle()
+        if FluentWindow then
+            FluentWindow:Toggle()
         end
     end)
 end
 
-return FloatingButtonModel
+return FloatingModel
