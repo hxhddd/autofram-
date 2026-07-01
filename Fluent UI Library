@@ -1,7 +1,7 @@
 -- [[ 🛑 โซนที่ 1: One-Line Loader หน้าบ้าน (By.HxHDDD v1.2) 🛑 ]]
 -- Project: Auto Farm Hub | Version: 1.2 | By.HxHDDD
 
--- ฝังคอนฟิกปุ่มลอยไว้ตรงนี้แทนลิงก์เก่า เพื่อให้ดึงข้อมูลได้ด่วนจี๋ ไม่หน่วงเครื่อง
+-- 1. ฝังคอนฟิกปุ่มลอย (🔮) ไว้ในตัวแปร Global เพื่อให้หลังบ้านดึงไปใช้เสกปุ่มได้ทันที ไม่หน่วงเครื่อง
 _G.ButtonConfig = { 
     button_text = "🔮", 
     button_size_x = 50, 
@@ -11,6 +11,6 @@ _G.ButtonConfig = {
     credit = "By.HxHDDD" 
 }
 
--- วิ่งไปเรียกศูนย์ควบคุมหลักหลังบ้าน (index.lua) ทันที
+-- 2. ยิงลิงก์ตรงเข้าไปปลุกศูนย์ควบคุมหลังบ้าน (index.lua) ให้ทำงาน
 local MainHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/index.lua"))()
 MainHub:Init()
