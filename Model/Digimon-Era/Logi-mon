@@ -1,132 +1,54 @@
--- [[ 🛑 โซนที่ 1.5: ตรรกะฟังก์ชันวาร์ปและกดรีโมทอัตโนมัติ (เวอร์ชันรองรับมือถือ) 🛑 ]]
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
--- ฟังก์ชันแกนหลักสำหรับวาร์ปและสั่งกด ProximityPrompt แบบเซฟเครื่องมือถือ
-local function interactWithPrompt(prompt)
-    if not prompt or not prompt:IsA("ProximityPrompt") then return end
-    
-    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local rootPart = character:WaitForChild("HumanoidRootPart")
-    local targetPart = prompt.Parent:IsA("Model") and prompt.Parent.PrimaryPart or prompt.Parent
-    
-    if targetPart and targetPart:IsA("BasePart") then
-        -- 1. วาร์ปตัวละครเข้าไปประชิด
-        rootPart.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
-        
-        -- ดีเลย์ 0.2 วินาทีเพื่อให้โทรศัพท์ไม่แรงโหลดฉาก/วัตถุรอบๆ ทันก่อนกด
-        task.wait(0.2) 
-        
-        local originalRequiresLineOfSight = prompt.RequiresLineOfSight
-        local originalMaxDistance = prompt.MaxActivationDistance
-        
-        prompt.RequiresLineOfSight = false
-        prompt.MaxActivationDistance = 9999
-        
-        -- 2. สั่งเริ่มกดค้างไว้ตามเวลาของไอเทมนั้นๆ
-        prompt:InputHoldBegin()
-        task.wait(prompt.HoldDuration + 0.05)
-        prompt:InputHoldEnd()
-        
-        -- คืนค่าดั้งเดิม
-        prompt.RequiresLineOfSight = originalRequiresLineOfSight
-        prompt.MaxActivationDistance = originalMaxDistance
-        
-        -- ดีเลย์อีก 0.2 วินาทีหลังเก็บเสร็จ เพื่อให้ระบบเซิร์ฟเวอร์บันทึกข้อมูลและโหลดแอนิเมชันทัน
-        task.wait(0.2)
-    end
-end
-
--- ฟังก์ชันค้นหาวัตถุตามโครงสร้าง Path
-local function getPromptFromPath(folderName, objectName, subPath)
-    local gameMap = workspace:FindFirstChild("GameMap")
-    if not gameMap then return nil end
-    
-    local zoneFolder = gameMap:FindFirstChild(folderName)
-    if not zoneFolder then return nil end
-    
-    local mainObj = zoneFolder:FindFirstChild(objectName)
-    if not mainObj then return nil end
-    
-    local prompt = mainObj
-    for segment in string.gmatch(config or subPath, "[^%.]+") do
-        prompt = prompt and prompt:FindFirstChild(segment)
-    end
-    return prompt
-end
-
--- ตัวแปรเก็บสถานะการเปิด-ปิดลูปของแต่ละหัวข้อ
-local Flags = {
-    DarkTower = false,
-    StandardTreasure = false,
-    Carrot = false
-}
-
-
 -- [[ 🛑 โซนที่ 2: โครงสร้างการสร้างปุ่ม Toggle ลูปอัตโนมัติ ลิงก์เข้ากับ Fluent UI 🛑 ]]
+-- หมายเหตุ: ปรับตัวแปรหน้าบ้านของคุณให้ส่งค่าแท็บมาที่ Tabs.Main หรือเปลี่ยนตรงนี้ให้ตรงกับชื่อตัวแปรแท็บหน้าบ้าน
 
--- 1. สวิตช์ลูปฟาร์ม Dark Tower
-Tabs.Main:AddToggle("DarkTowerLoop", {
-    Title = "Auto Farm: Dark Tower",
-    Default = false,
-    Callback = function(Value)
-        Flags.DarkTower = Value
-        
-        -- สั่งให้ทำงานเป็นลูปเมื่อเปิดสวิตช์ (True)
-        task.spawn(function()
-            while Flags.DarkTower do
-                local prompt = getPromptFromPath("11_9", "Dark Tower", "TriggerPart.ProximityPrompt")
-                if prompt then
-                    interactWithPrompt(prompt)
-                else
-                    -- ถ้าหาไม่เจอ ให้เว้นระยะแป๊บหนึ่งแล้วค่อยหาใหม่ (ป้องกันโค้ดรันไวเกินไปจนเกมค้าง)
-                    task.wait(0.5) 
+if Tabs and Tabs.Main then
+    -- 1. สวิตช์ลูปฟาร์ม Dark Tower
+    Tabs.Main:AddToggle("DarkTowerLoop", {
+        Title = "Auto Farm: Dark Tower",
+        Default = false,
+        Callback = function(Value)
+            Flags.DarkTower = Value
+            task.spawn(function()
+                while Flags.DarkTower do
+                    local prompt = getPromptFromPath("11_9", "Dark Tower", "TriggerPart.ProximityPrompt")
+                    if prompt then interactWithPrompt(prompt) else task.wait(0.5) end
+                    task.wait(0.1)
                 end
-                task.wait(0.1)
-            end
-        end)
-    end
-})
+            end)
+        end
+    })
 
--- 2. สวิตช์ลูปฟาร์ม Standard Treasure (Ruins1)
-Tabs.Main:AddToggle("StandardTreasureLoop", {
-    Title = "Auto Farm: Standard Treasure",
-    Default = false,
-    Callback = function(Value)
-        Flags.StandardTreasure = Value
-        
-        task.spawn(function()
-            while Flags.StandardTreasure do
-                local prompt = getPromptFromPath("12_8", "Ruins1", "Standard Treasure.ProximityPrompt")
-                if prompt then
-                    interactWithPrompt(prompt)
-                else
-                    task.wait(0.5)
+    -- 2. สวิตช์ลูปฟาร์ม Standard Treasure (Ruins1)
+    Tabs.Main:AddToggle("StandardTreasureLoop", {
+        Title = "Auto Farm: Standard Treasure",
+        Default = false,
+        Callback = function(Value)
+            Flags.StandardTreasure = Value
+            task.spawn(function()
+                while Flags.StandardTreasure do
+                    local prompt = getPromptFromPath("12_8", "Ruins1", "Standard Treasure.ProximityPrompt")
+                    if prompt then interactWithPrompt(prompt) else task.wait(0.5) end
+                    task.wait(0.1)
                 end
-                task.wait(0.1)
-            end
-        end)
-    end
-})
+            end)
+        end
+    })
 
--- 3. สวิตช์ลูปฟาร์ม Carrot
-Tabs.Main:AddToggle("CarrotLoop", {
-    Title = "Auto Farm: Carrot",
-    Default = false,
-    Callback = function(Value)
-        Flags.Carrot = Value
-        
-        task.spawn(function()
-            while Flags.Carrot do
-                local prompt = getPromptFromPath("12_7", "Carrot", "Carrot.ProximityPrompt")
-                if prompt then
-                    interactWithPrompt(prompt)
-                else
-                    task.wait(0.5)
+    -- 3. สวิตช์ลูปฟาร์ม Carrot
+    Tabs.Main:AddToggle("CarrotLoop", {
+        Title = "Auto Farm: Carrot",
+        Default = false,
+        Callback = function(Value)
+            Flags.Carrot = Value
+            task.spawn(function()
+                while Flags.Carrot do
+                    local prompt = getPromptFromPath("12_7", "Carrot", "Carrot.ProximityPrompt")
+                    if prompt then interactWithPrompt(prompt) else task.wait(0.5) end
+                    task.wait(0.1)
                 end
-                task.wait(0.1)
-            end
-        end)
-    end
-})
+            end)
+        end
+    })
+else
+    warn("By.HxHDDD: Cannot find Fluent UI Tab (Tabs.Main) to create toggles!")
+end
