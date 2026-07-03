@@ -1,7 +1,10 @@
--- [[ 🛑 โซนที่ 1: ตรรกะฟังก์ชันวาร์ปและสแกนไดนามิก (รองรับพิกัดติดลบ + ยิงรีโมท + เช็คของหาย) 🛑 ]]
+-- [[ 🛑 โซนที่ 1: ตรรกะฟังก์ชันวาร์ปและสแกนไดนามิก (ระบบพิกัดติดลบ + ยิงรีโมท + คูลดาวน์เกิดซ้ำ 3 นาที) 🛑 ]]
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+
+-- ตารางสำหรับเก็บประวัติพิกัดออบเจ็กต์ที่ถูกเก็บไปแล้วชั่วคราว
+local Cooldowns = {}
 
 -- ฟังก์ชันยิงกด ProximityPrompt แบบรีโมทประชิด (เร่งความเร็ว + เช็คของหาย)
 local function interactWithPrompt(prompt)
@@ -16,8 +19,10 @@ local function interactWithPrompt(prompt)
         rootPart.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
         task.wait(0.15) -- ดีเลย์จังหวะแรกให้ตัวละครเสถียรบนพิกัดฉากใหม่
         
-        -- ตรวจสอบซ้ำอีกรอบเผื่อของโดนแย่งเก็บไปก่อนหน้าหน้าจังหวะนี้
         if not prompt or not prompt.Parent then return end
+        
+        -- ดึงพิกัดตำแหน่งหรือตัว Object หลักมาเป็น Key ในการทำบันทึกคูลดาวน์
+        local itemKey = targetPart.Position
         
         -- 2. สั่งยิงคำสั่งกดแบบ Remote ทันที (เร่งความเร็วข้ามแอนิเมชันสำหรับมือถือ)
         pcall(function()
@@ -31,12 +36,14 @@ local function interactWithPrompt(prompt)
             timeOut = timeOut + 0.05
         end
         
-        -- ดีเลย์สั้นๆ 0.05 วินาทีหลังของหาย เพื่อเตรียมพร้อมสลับจุดวาร์ปต่อไปแบบสมูท
+        -- บันทึกเวลาปัจจุบันลงในระบบคูลดาวน์ (จำไว้ 3 นาที เพื่อให้กลับมาเกิดซ้ำแล้วเก็บใหม่ได้)
+        Cooldowns[itemKey] = os.time()
+        
         task.wait(0.05)
     end
 end
 
--- ฟังก์ชันกวาดหาวัตถุแบบไดนามิก: รองรับชื่อโฟลเดอร์พิกัดที่เป็นเลขติดลบทุกรูปแบบ (เช่น -4_-5, -12_-18, 8_-12)
+-- ฟังก์ชันกวาดหาวัตถุแบบไดนามิก: รองรับชื่อโฟลเดอร์พิกัดเลขติดลบ และระบบข้ามจุดที่ติดคูลดาวน์ 3 นาที
 local function findPromptDynamic(objectName, subPath)
     local gameMap = workspace:FindFirstChild("GameMap")
     if not gameMap then return nil end
@@ -45,7 +52,7 @@ local function findPromptDynamic(objectName, subPath)
     for _, zoneFolder in ipairs(gameMap:GetChildren()) do
         local mainObj = zoneFolder:FindFirstChild(objectName)
         if mainObj then
-            -- แกะสลัก Path ลงไปหาพิกัด ProximityPrompt โดยรองรับอักขระพิเศษและเว้นวรรคได้ร้อยเปอร์เซ็นต์
+            -- แกะสลัก Path ลงไปหาพิกัด ProximityPrompt
             local prompt = mainObj
             for segment in string.gmatch(subPath, "[^%.]+") do
                 if prompt then
@@ -55,16 +62,30 @@ local function findPromptDynamic(objectName, subPath)
                 end
             end
             
-            -- ตรวจสอบความสมบูรณ์ก่อนส่งค่าไปใช้งาน
+            -- ตรวจสอบความสมบูรณ์ของ Prompt
             if prompt and prompt:IsA("ProximityPrompt") and prompt.Parent then
-                return prompt
+                local targetPart = prompt.Parent:IsA("Model") and prompt.Parent.PrimaryPart or prompt.Parent
+                if targetPart and targetPart:IsA("BasePart") then
+                    local itemKey = targetPart.Position
+                    
+                    -- เช็คว่าจุดนี้เคยเก็บไปหรือยัง ถ้าเคยเก็บแล้วและยังไม่ครบ 3 นาที (180 วินาที) ให้ข้ามไปก่อน
+                    if Cooldowns[itemKey] then
+                        if os.time() - Cooldowns[itemKey] < 180 then
+                            continue -- ข้ามจุดนี้ไปหาจุดอื่นที่พร้อมฟาร์ม
+                        else
+                            Cooldowns[itemKey] = nil -- ครบ 3 นาทีแล้ว ปลดล็อกล้างค่าออกให้กลับมาฟาร์มใหม่ได้
+                        end
+                    end
+                    
+                    return prompt
+                end
             end
         end
     end
     return nil
 end
 
--- ตัวแปรเก็บสถานะการเปิด-ปิดลูปของแต่ละหัวข้อ (ครบถ้วนทั้ง 4 ฟังก์ชัน)
+-- ตัวแปรเก็บสถานะการเปิด-ปิดลูปของแต่ละหัวข้อ
 local Flags = {
     DarkTower = false,
     StandardTreasure = false,
@@ -92,7 +113,7 @@ if MainTab then
                     if prompt then 
                         interactWithPrompt(prompt) 
                     else 
-                        task.wait(0.3) -- ถ้าของยังไม่เกิดใหม่ ให้หยุดพักสแกนสั้นๆ กันบอทรันถี่เกินไป
+                        task.wait(0.3)
                     end
                     task.wait(0.05)
                 end
@@ -140,7 +161,7 @@ if MainTab then
         end
     })
 
-    -- 4. สวิตช์ลูปฟาร์ม Royal Treasure (ตัวซ่อนลึกพิกัดติดลบที่เพิ่มใหม่)
+    -- 4. สวิตช์ลูปฟาร์ม Royal Treasure (ตัวซ่อนลึกพิกัดติดลบ)
     MainTab:AddToggle("RoyalTreasureLoop", {
         Title = "Auto Farm: Royal Treasure",
         Default = false,
