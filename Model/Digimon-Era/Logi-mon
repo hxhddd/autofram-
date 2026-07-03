@@ -1,35 +1,22 @@
--- [[ 🛑 โซนที่ 1.2: ตรรกะการกวาดหาวัตถุในโฟลเดอร์ตัวเลขทั้งหมด 🛑 ]]
+-- [[ 🛑 โซนที่ 1.9: วนลูปรอจนกว่าหน้าต่าง UI หน้าบ้านจะโหลดเซ็ตค่าเสร็จ By.HxHDDD 🛑 ]]
 
-local function findPromptDynamic(objectName, subPath)
-    local gameMap = workspace:FindFirstChild("GameMap")
-    if not gameMap then return nil end
-    
-    -- วนลูปกวาดเช็คทุก Folder/Model ที่อยู่ภายใต้ GameMap (เช่น "12_11", "11_9" เป็นต้น)
-    for _, zoneFolder in ipairs(gameMap:GetChildren()) do
-        local mainObj = zoneFolder:FindFirstChild(objectName)
-        if mainObj then
-            -- เมื่อเจอ Object เป้าหมายแล้ว ให้วิ่งเจาะตาม subPath ลงไปหา ProximityPrompt
-            local prompt = mainObj
-            for segment in string.gmatch(subPath, "[^%.]+") do
-                prompt = prompt and prompt:FindFirstChild(segment)
-            end
-            
-            -- ถ้าแกะ Path สำเร็จและวัตถุนั้นมีอยู่จริง ให้ส่งค่ากลับไปทำงานทันที
-            if prompt then
-                return prompt
-            end
-        end
-    end
-    return nil
-end
+-- เปลี่ยนมาใช้ตัวแปรแชร์ร่วมแกนหลักเดียวกัน เพื่อดึงข้อมูลมาแสดงปุ่มทันที
+repeat task.wait(0.5) until _G.HxHDDD_MainTab
+
+local MainTab = _G.HxHDDD_MainTab
 
 
--- [[ 🛑 โซนที่ 2: ปรับแต่งปุ่มสวิตช์ควบคุม (Toggle Loop) ร่วมกับ Fluent UI 🛑 ]]
+-- [[ 🛑 โซนที่ 2: โครงสร้างการสร้างปุ่ม Toggle ลูปอัตโนมัติ ลิงก์เข้ากับ UI 🛑 ]]
 
-local MainTab = Tabs and Tabs.Main or _G.Tabs and _G.Tabs.Main
+-- ตัวแปรเก็บสถานะเปิด/ปิดบอทของแต่ละหัวข้อ
+local Flags = {
+    DarkTower = false,
+    StandardTreasure = false,
+    Carrot = false
+}
 
 if MainTab then
-    -- 1. สวิตช์ลูปฟาร์ม Dark Tower (กวาดหาทุกโฟลเดอร์)
+    -- 1. สวิตช์ลูปฟาร์ม Dark Tower (กวาดหาทุกโฟลเดอร์ตัวเลข)
     MainTab:AddToggle("DarkTowerLoop", {
         Title = "Auto Farm: Dark Tower",
         Default = false,
@@ -37,7 +24,6 @@ if MainTab then
             Flags.DarkTower = Value
             task.spawn(function()
                 while Flags.DarkTower do
-                    -- ใช้ฟังก์ชันไดนามิกในการสแกนหาแทนการล็อกชื่อโฟลเดอร์
                     local prompt = findPromptDynamic("Dark Tower", "TriggerPart.ProximityPrompt")
                     if prompt then 
                         interactWithPrompt(prompt) 
@@ -50,7 +36,7 @@ if MainTab then
         end
     })
 
-    -- 2. สวิตช์ลูปฟาร์ม Standard Treasure (กวาดหาทุกโฟลเดอร์)
+    -- 2. สวิตช์ลูปฟาร์ม Standard Treasure (กวาดหาทุกโฟลเดอร์ตัวเลข)
     MainTab:AddToggle("StandardTreasureLoop", {
         Title = "Auto Farm: Standard Treasure",
         Default = false,
@@ -70,7 +56,7 @@ if MainTab then
         end
     })
 
-    -- 3. สวิตช์ลูปฟาร์ม Carrot (กวาดหาทุกโฟลเดอร์)
+    -- 3. สวิตช์ลูปฟาร์ม Carrot (กวาดหาทุกโฟลเดอร์ตัวเลข)
     MainTab:AddToggle("CarrotLoop", {
         Title = "Auto Farm: Carrot",
         Default = false,
@@ -89,4 +75,6 @@ if MainTab then
             end)
         end
     })
+else
+    warn("❌ By.HxHDDD: ไม่พบแท็บหน้าต่างหลักของ Fuel Library ผ่านตัวแปร _G.HxHDDD_MainTab")
 end
