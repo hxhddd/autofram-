@@ -9,14 +9,7 @@ task.spawn(function()
     -- 2. โหลด Fuel Library (สร้าง UI แกนกลาง + ปุ่มลอย)
     loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Fluent_UI_Library"))()
     task.wait(0.5) -- รอระบบ UI เซ็ตอัปโครงสร้าง 0.5 วินาที
-
--- 4. Status Bar
-loadstring(game:HttpGet([[https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/Status_Bar]]))()
-
-
-
-
-
+    
     -- 3. โหลด Logic ฟาร์มหลักเข้ามาเสียบปลั๊กสร้างปุ่ม Toggle ทำงานร่วมกัน ทันที
     loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/Test/Logi"))()
 end)
