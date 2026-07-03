@@ -1,11 +1,10 @@
--- [[ 🛑 โซนที่ 1: ตรรกะฟังก์ชันวาร์ปและสแกนไดนามิก เวอร์ชันยิงรีโมท + เช็คของหาย 🛑 ]]
+-- [[ 🛑 โซนที่ 1: ตรรกะฟังก์ชันวาร์ปและสแกนไดนามิก (รองรับพิกัดติดลบ + ยิงรีโมท + เช็คของหาย) 🛑 ]]
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- ฟังก์ชันยิงกด ProximityPrompt แบบรีโมทประชิด (เร่งความเร็ว + เช็คของหาย)
 local function interactWithPrompt(prompt)
-    -- เช็คเงื่อนไขเบื้องต้นว่า Prompt และวัตถุนั้นยังคงอยู่จริงบนแมพ
     if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Parent then return end
     
     local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -17,10 +16,10 @@ local function interactWithPrompt(prompt)
         rootPart.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
         task.wait(0.15) -- ดีเลย์จังหวะแรกให้ตัวละครเสถียรบนพิกัดฉากใหม่
         
-        -- ตรวจสอบอีกครั้งว่าจังหวะหลังจากวาร์ปมา ของชิ้นนี้ยังไม่โดนคนอื่นแย่งเก็บหายไป
+        -- ตรวจสอบซ้ำอีกรอบเผื่อของโดนแย่งเก็บไปก่อนหน้าหน้าจังหวะนี้
         if not prompt or not prompt.Parent then return end
         
-        -- 2. สั่งยิงคำสั่งกดแบบ Remote ทันที (ข้ามแอนิเมชันโหลดค้างเพื่อความรวดเร็ว)
+        -- 2. สั่งยิงคำสั่งกดแบบ Remote ทันที (เร่งความเร็วข้ามแอนิเมชันสำหรับมือถือ)
         pcall(function()
             fireproximityprompt(prompt, 0)
         end)
@@ -37,19 +36,26 @@ local function interactWithPrompt(prompt)
     end
 end
 
--- ฟังก์ชันกวาดหาวัตถุในทุกโฟลเดอร์ตัวเลขแบบ Dynamic (เช่น "12_11", "11_9")
+-- ฟังก์ชันกวาดหาวัตถุแบบไดนามิก: รองรับชื่อโฟลเดอร์พิกัดที่เป็นเลขติดลบทุกรูปแบบ (เช่น -4_-5, -12_-18, 8_-12)
 local function findPromptDynamic(objectName, subPath)
     local gameMap = workspace:FindFirstChild("GameMap")
     if not gameMap then return nil end
     
+    -- กวาดเช็คทุก Folder/Model ใน GameMap โดยไม่สนใจว่าชื่อจะเป็นพิกัดเลขบวกหรือเลขลบ
     for _, zoneFolder in ipairs(gameMap:GetChildren()) do
         local mainObj = zoneFolder:FindFirstChild(objectName)
         if mainObj then
+            -- แกะสลัก Path ลงไปหาพิกัด ProximityPrompt โดยรองรับอักขระพิเศษและเว้นวรรคได้ร้อยเปอร์เซ็นต์
             local prompt = mainObj
             for segment in string.gmatch(subPath, "[^%.]+") do
-                prompt = prompt and prompt:FindFirstChild(segment)
+                if prompt then
+                    prompt = prompt:FindFirstChild(segment)
+                else
+                    break
+                end
             end
-            -- ตรวจสอบเพิ่มเติมว่า Prompt เปิดใช้งานอยู่ และมีวัตถุแม่รองรับอยู่จริง
+            
+            -- ตรวจสอบความสมบูรณ์ก่อนส่งค่าไปใช้งาน
             if prompt and prompt:IsA("ProximityPrompt") and prompt.Parent then
                 return prompt
             end
@@ -58,11 +64,12 @@ local function findPromptDynamic(objectName, subPath)
     return nil
 end
 
--- ตัวแปรเก็บสถานะการเปิด-ปิดลูปของแต่ละหัวข้อ
+-- ตัวแปรเก็บสถานะการเปิด-ปิดลูปของแต่ละหัวข้อ (ครบถ้วนทั้ง 4 ฟังก์ชัน)
 local Flags = {
     DarkTower = false,
     StandardTreasure = false,
-    Carrot = false
+    Carrot = false,
+    RoyalTreasure = false
 }
 
 
@@ -71,7 +78,7 @@ repeat task.wait(0.5) until _G.HxHDDD_MainTab
 local MainTab = _G.HxHDDD_MainTab
 
 
--- [[ 🛑 โซนที่ 2: โครงสร้างการสร้างปุ่ม Toggle ลูปอัตโนมัติ ลิงก์เข้ากับ UI 🛑 ]]
+-- [[ 🛑 โซนที่ 2: โครงสร้างการสร้างปุ่ม Toggle ลูปอัตโนมัติ ทั้ง 4 ปุ่ม ร่วมกับ Fuel UI 🛑 ]]
 if MainTab then
     -- 1. สวิตช์ลูปฟาร์ม Dark Tower
     MainTab:AddToggle("DarkTowerLoop", {
@@ -132,4 +139,26 @@ if MainTab then
             end)
         end
     })
+
+    -- 4. สวิตช์ลูปฟาร์ม Royal Treasure (ตัวซ่อนลึกพิกัดติดลบที่เพิ่มใหม่)
+    MainTab:AddToggle("RoyalTreasureLoop", {
+        Title = "Auto Farm: Royal Treasure",
+        Default = false,
+        Callback = function(Value)
+            Flags.RoyalTreasure = Value
+            task.spawn(function()
+                while Flags.RoyalTreasure do
+                    local prompt = findPromptDynamic("RuinsHuge1", "Royal Treasure.ProximityPrompt")
+                    if prompt then 
+                        interactWithPrompt(prompt) 
+                    else 
+                        task.wait(0.3) 
+                    end
+                    task.wait(0.05)
+                end
+            end)
+        end
+    })
+else
+    warn("❌ By.HxHDDD: ไม่พบแท็บหน้าต่างหลักของ Fuel Library ผ่านตัวแปร _G.HxHDDD_MainTab")
 end
