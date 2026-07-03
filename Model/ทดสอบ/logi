@@ -1,0 +1,96 @@
+-- [[ 🛑 โซนที่ 3: Logic ฟาร์มหลัก (AutoCollector - ตีกรอบพิกัดเฉพาะรายการ) 🛑 ]]
+-- บันทึกโค้ดแก้ไขนี้ไว้ที่ลิงก์เดิมของคุณ: https://pastebin.com/raw/eiSWv0K3
+
+local MainTab = _G.HxHDDD_MainTab
+if not MainTab then warn("❌ ไม่พบแท็บหน้าต่างหลักของ Fuel Library!") return end
+
+local AutoCollector = {}
+AutoCollector.__index = AutoCollector
+
+function AutoCollector.new()
+    local self = setmetatable({}, AutoCollector)
+    self.IsRunning = false
+    
+    -- ลิสต์คำค้นหาใน ActionText เพื่อความชัวร์ (ดึงเป็นพิมพ์เล็กทั้งหมด)
+    self.Keywords = {"collect", "take", "harvest", "open", "eat", "pickup", "interact"}
+    
+    return self
+end
+
+-- 🛠️ ตรรกะใหม่: ตีกรอบเส้นทางอ้างอิงตามรูป Explorer ป้องกันการหลุดไปกด "ไข่ฟัก/ไข่ชา"
+function AutoCollector:ShouldInteract(prompt)
+    if not prompt or not prompt.Enabled then return false end
+    
+    -- 1. ตรวจสอบเงื่อนไขทางผ่านสายไข่ (อิงตามรูป 200745-200748)
+    -- เส้นทางที่ต้องการ: workspace.Live.Eggs.Client -> [ID โฟลเดอร์] -> [Root/Main] -> ProximityPrompt
+    local isEggZone = prompt:IsDescendantOf(workspace:FindFirstChild("Live") and workspace.Live:FindFirstChild("Eggs") and workspace.Live.Eggs:FindFirstChild("Client"))
+    
+    -- 2. ตรวจสอบเงื่อนไขทางผ่านสายอาหาร/ต้นไม้ (อิงตามรูป 200744)
+    -- เส้นทางที่ต้องการ: workspace.Resources.FoodTreeCheck -> [Tree1, Tree2, ...] -> ProximityPrompt
+    local isFoodZone = prompt:IsDescendantOf(workspace:FindFirstChild("Resources") and workspace.Resources:FindFirstChild("FoodTreeCheck"))
+    
+    -- หาก ProximityPrompt นี้ไม่ได้อยู่ใน 2 โครงสร้างรายการหลักนี้... ให้ข้ามทันที!
+    if not (isEggZone or isFoodZone) then 
+        return false 
+    end
+    
+    -- 3. ตรวจสอบข้อความ ActionText เพื่อความแม่นยำเพิ่มเติม
+    local actionText = prompt.ActionText:lower()
+    for _, keyword in ipairs(self.Keywords) do
+        if actionText:find(keyword) then 
+            return true 
+        end
+    end
+    
+    return false
+end
+
+function AutoCollector:Collect()
+    while self.IsRunning do
+        local collected = false
+        
+        -- ค้นหาเฉพาะในกลุ่มเป้าหมายเพื่อลดภาระเครื่องและเพิ่มความเร็ว
+        local targets = {}
+        if workspace:FindFirstChild("Live") and workspace.Live:FindFirstChild("Eggs") and workspace.Live.Eggs:FindFirstChild("Client") then
+            for _, v in ipairs(workspace.Live.Eggs.Client:GetDescendants()) do table.insert(targets, v) end
+        end
+        if workspace:FindFirstChild("Resources") and workspace.Resources:FindFirstChild("FoodTreeCheck") then
+            for _, v in ipairs(workspace.Resources.FoodTreeCheck:GetDescendants()) do table.insert(targets, v) end
+        end
+        
+        -- ลูปเจาะจงเฉพาะกลุ่มเป้าหมายในรายการ
+        for _, obj in ipairs(targets) do
+            if not self.IsRunning then break end
+            if obj:IsA("ProximityPrompt") then
+                if self:ShouldInteract(obj) then
+                    pcall(function() fireproximityprompt(obj, 0) end)
+                    collected = true
+                end
+            end
+        end
+        
+        if collected then task.wait(0.08) else task.wait(0.6) end
+    end
+end
+
+function AutoCollector:Start()
+    if self.IsRunning then return end
+    self.IsRunning = true
+    task.spawn(function() self:Collect() end)
+    print("🚀 AutoCollector ตีกรอบเส้นทาง เริ่มทำงานแล้ว")
+end
+
+function AutoCollector:Stop()
+    self.IsRunning = false
+    print("⛔ AutoCollector หยุดแล้ว")
+end
+
+local CollectorInstance = AutoCollector.new()
+
+MainTab:AddToggle("AutoCollectToggle", {
+    Title = "เปิด Auto Collect (กวาดล้างยกแผง)",
+    Default = false,
+    Callback = function(Value)
+        if Value then CollectorInstance:Start() else CollectorInstance:Stop() end
+    end
+})
