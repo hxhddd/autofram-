@@ -1,40 +1,39 @@
--- [[ 🛑 โซนที่ 1: ตรรกะฟังก์ชันวาร์ปและสแกนไดนามิก (By.HxHDDD) 🛑 ]]
+-- [[ 🛑 โซนที่ 1: ตรรกะฟังก์ชันวาร์ปและสแกนไดนามิก เวอร์ชันยิงรีโมท + เช็คของหาย 🛑 ]]
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- ฟังก์ชันแกนหลักสำหรับวาร์ปและสั่งกด ProximityPrompt แบบเซฟเครื่องมือถือ
+-- ฟังก์ชันยิงกด ProximityPrompt แบบรีโมทประชิด (เร่งความเร็ว + เช็คของหาย)
 local function interactWithPrompt(prompt)
-    if not prompt or not prompt:IsA("ProximityPrompt") then return end
+    -- เช็คเงื่อนไขเบื้องต้นว่า Prompt และวัตถุนั้นยังคงอยู่จริงบนแมพ
+    if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Parent then return end
     
     local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local rootPart = character:WaitForChild("HumanoidRootPart")
     local targetPart = prompt.Parent:IsA("Model") and prompt.Parent.PrimaryPart or prompt.Parent
     
     if targetPart and targetPart:IsA("BasePart") then
-        -- 1. วาร์ปตัวละครเข้าไปประชิดในระยะปลอดภัย
+        -- 1. วาร์ปตัวละครเข้าประชิดพิกัดเพื่อให้ตำแหน่งฝั่งเซิร์ฟเวอร์อัปเดตทัน
         rootPart.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+        task.wait(0.15) -- ดีเลย์จังหวะแรกให้ตัวละครเสถียรบนพิกัดฉากใหม่
         
-        -- ดีเลย์ 0.2 วินาทีเพื่อให้โทรศัพท์ไม่แรงโหลดฉาก/วัตถุทันก่อนกด
-        task.wait(0.2) 
+        -- ตรวจสอบอีกครั้งว่าจังหวะหลังจากวาร์ปมา ของชิ้นนี้ยังไม่โดนคนอื่นแย่งเก็บหายไป
+        if not prompt or not prompt.Parent then return end
         
-        local originalRequiresLineOfSight = prompt.RequiresLineOfSight
-        local originalMaxDistance = prompt.MaxActivationDistance
+        -- 2. สั่งยิงคำสั่งกดแบบ Remote ทันที (ข้ามแอนิเมชันโหลดค้างเพื่อความรวดเร็ว)
+        pcall(function()
+            fireproximityprompt(prompt, 0)
+        end)
         
-        prompt.RequiresLineOfSight = false
-        prompt.MaxActivationDistance = 9999
+        -- 3. ลูปรอเช็คสถานะจนกว่าวัตถุจะสลายหายไปจริง (สูงสุดไม่เกิน 0.3 วินาที กันบอทติดบั๊กค้างคาที่)
+        local timeOut = 0
+        while prompt and prompt.Parent and timeOut < 0.3 do
+            task.wait(0.05)
+            timeOut = timeOut + 0.05
+        end
         
-        -- 2. สั่งเริ่มกดค้างไว้ตามเวลาของไอเทมนั้นๆ + 0.05 กันหลุด
-        prompt:InputHoldBegin()
-        task.wait(prompt.HoldDuration + 0.05)
-        prompt:InputHoldEnd()
-        
-        -- คืนค่าดั้งเดิม
-        prompt.RequiresLineOfSight = originalRequiresLineOfSight
-        prompt.MaxActivationDistance = originalMaxDistance
-        
-        -- ดีเลย์อีก 0.2 วินาทีหลังเก็บเสร็จ เพื่อให้ระบบเซิร์ฟเวอร์บันทึกข้อมูลทัน
-        task.wait(0.2)
+        -- ดีเลย์สั้นๆ 0.05 วินาทีหลังของหาย เพื่อเตรียมพร้อมสลับจุดวาร์ปต่อไปแบบสมูท
+        task.wait(0.05)
     end
 end
 
@@ -43,7 +42,6 @@ local function findPromptDynamic(objectName, subPath)
     local gameMap = workspace:FindFirstChild("GameMap")
     if not gameMap then return nil end
     
-    -- วนลูปกวาดเช็คทุก Folder ที่อยู่ภายใต้ GameMap เพื่อให้ฟาร์มได้ทุกโซน
     for _, zoneFolder in ipairs(gameMap:GetChildren()) do
         local mainObj = zoneFolder:FindFirstChild(objectName)
         if mainObj then
@@ -51,7 +49,8 @@ local function findPromptDynamic(objectName, subPath)
             for segment in string.gmatch(subPath, "[^%.]+") do
                 prompt = prompt and prompt:FindFirstChild(segment)
             end
-            if prompt then
+            -- ตรวจสอบเพิ่มเติมว่า Prompt เปิดใช้งานอยู่ และมีวัตถุแม่รองรับอยู่จริง
+            if prompt and prompt:IsA("ProximityPrompt") and prompt.Parent then
                 return prompt
             end
         end
@@ -86,9 +85,9 @@ if MainTab then
                     if prompt then 
                         interactWithPrompt(prompt) 
                     else 
-                        task.wait(0.5) -- หากหาไม่เจอให้รอแป๊บหนึ่งกันโค้ดรันไวเกินไป
+                        task.wait(0.3) -- ถ้าของยังไม่เกิดใหม่ ให้หยุดพักสแกนสั้นๆ กันบอทรันถี่เกินไป
                     end
-                    task.wait(0.1)
+                    task.wait(0.05)
                 end
             end)
         end
@@ -106,9 +105,9 @@ if MainTab then
                     if prompt then 
                         interactWithPrompt(prompt) 
                     else 
-                        task.wait(0.5) 
+                        task.wait(0.3) 
                     end
-                    task.wait(0.1)
+                    task.wait(0.05)
                 end
             end)
         end
@@ -126,13 +125,11 @@ if MainTab then
                     if prompt then 
                         interactWithPrompt(prompt) 
                     else 
-                        task.wait(0.5) 
+                        task.wait(0.3) 
                     end
-                    task.wait(0.1)
+                    task.wait(0.05)
                 end
             end)
         end
     })
-else
-    warn("❌ By.HxHDDD: ไม่พบแท็บหน้าต่างหลักของ Fuel Library ผ่านตัวแปร _G.HxHDDD_MainTab")
 end
