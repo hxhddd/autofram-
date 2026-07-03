@@ -1,0 +1,91 @@
+-- [[ 🛑 โซนที่ 2: Fuel Library สำเร็จรูป แกนหลัก UI By.HxHDDD 🛑 ]]
+-- บันทึกโค้ดแก้ไขใหม่นี้ไว้ที่ลิงก์เดิมของคุณ: https://pastebin.com/raw/0V1q1P0f
+
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local BaseConfigUrl = _G.PastebinRawUrl or "https://pastebin.com/raw/9vk160L8"
+
+-- ดึงค่า JSON มาเสกปุ่มลอยสำเร็จรูป (ป้องการ Error 404)
+local Success, ConfigData = pcall(function() 
+    return game:GetService("HttpService"):JSONDecode(game:HttpGet(BaseConfigUrl)) 
+end)
+local ButtonConfig = Success and ConfigData or { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2 }
+
+-- [สร้างหน้าต่างหลักแชร์ผ่านสากล _G]
+_G.HxHDDD_Window = Fluent:CreateWindow({
+    Title = _G.ProjectName or "Auto Farm Hub",
+    SubTitle = _G.ProjectVersion or "v1.0 | By.HxHDDD",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark"
+})
+
+-- สร้างแท็บหลักทิ้งไว้ให้ Logic เอาไปเรียกใช้
+_G.HxHDDD_MainTab = _G.HxHDDD_Window:AddTab({ Title = "ฟาร์มหลัก", Icon = "home" })
+
+-- เสกปุ่มลอยควบคุมสำหรับมือถือ
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+
+if CoreGui:FindFirstChild("HxHDDD_FloatUI") then CoreGui["HxHDDD_FloatUI"]:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "HxHDDD_FloatUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+local Button = Instance.new("TextButton")
+Button.Name = "MainButton"
+Button.Text = ButtonConfig.button_text
+Button.Size = UDim2.fromOffset(ButtonConfig.button_size_x, ButtonConfig.button_size_y)
+Button.Position = UDim2.fromScale(ButtonConfig.default_pos_x, ButtonConfig.default_pos_y)
+Button.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+Button.Font = Enum.Font.GothamBold
+Button.TextSize = 22
+Button.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 50)
+UICorner.Parent = Button
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(138, 43, 226)
+UIStroke.Thickness = 1.5
+UIStroke.Parent = Button
+
+-- ระบบลากนิ้วปุ่มลอยบนจอมือถืออย่างอิสระ
+local dragging, dragInput, dragStart, startPos
+Button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Button.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+    end
+end)
+Button.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        Button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- 🛠️ ปรับแก้ตรรกะระบบย่อพับสลับสถานะหน้าต่าง Fluent UI ให้ทำงานได้จริงบนมือถือ
+Button.MouseButton1Click:Connect(function()
+    local WindowInstance = _G.HxHDDD_Window
+    if WindowInstance then
+        -- 1. เช็กผ่าน Property ย่อส่วนมาตรฐาน (Minimized) ของ Fluent UI
+        if WindowInstance.Minimized ~= nil then
+            WindowInstance:Minimize(not WindowInstance.Minimized)
+        -- 2. รองรับกรณีบางเวอร์ชันใช้การซ่อน Frame หลักโดยตรง
+        elseif WindowInstance.Frame then
+            WindowInstance.Frame.Visible = not WindowInstance.Frame.Visible
+        end
+    end
+end)
+
+print("✅ [Fuel Library By.HxHDDD] Setup Completed Successfully with Fixed Toggle!")
