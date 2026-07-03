@@ -7,11 +7,9 @@ _G.PastebinRawUrl = "https://pastebin.com/raw/9vk160L8" -- 1. ลิงก์ป
 
 task.spawn(function()
     -- 2. โหลด Fuel Library (สร้าง UI แกนกลาง + ปุ่มลอย)
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/%E0%B8%97%E0%B8%94%E0%B8%AA%E0%B8%AD%E0%B8%9A/Fuel%20Library
-"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Fluent_UI_Library"))()
     task.wait(0.5) -- รอระบบ UI เซ็ตอัปโครงสร้าง 0.5 วินาที
     
     -- 3. โหลด Logic ฟาร์มหลักเข้ามาเสียบปลั๊กสร้างปุ่ม Toggle ทำงานร่วมกัน ทันที
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/%E0%B8%97%E0%B8%94%E0%B8%AA%E0%B8%AD%E0%B8%9A/logi
-"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/Test/Logi"))()
 end)
