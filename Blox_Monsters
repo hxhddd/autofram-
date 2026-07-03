@@ -1,22 +1,17 @@
--- [[ 🛑 โซนที่ 1: ตัวโหลดรวมร่างแนวราบและคุมลูปหลัก (By.HxHDDD v3.2) 🛑 ]]
--- Project: Auto Farm Hub | Version: 3.2 | By.HxHDDD
+-- [[ 🛑 โซนที่ 1: Loader รวมร่างแนวราบ 3-Combo By.HxHDDD 🛑 ]]
+-- Project: Event Farm Control v1.0 | Style: Modern Flat UI
 
-_G.ButtonConfig = { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2, credit = "By.HxHDDD" }
-_G.AutoFarmRunning = false -- ตัวแปรสากลแผ่นเดียวกันสำหรับคุมลูปหลัก
+_G.ProjectName = "Event Farm Control"
+_G.ProjectVersion = "v1.0"
+_G.PastebinRawUrl = "https://pastebin.com/raw/9vk160L8" -- 1. ลิงก์ปุ่มคอนฟิก
 
--- 1. ดาวน์โหลดสคริปต์หน้าบ้านและหลังบ้านมากองรวมกันใน Environment เดียวกัน
-local FluentUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Fluent_UI_Library"))()
-local FarmLogic = loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/model-1"))()
-
--- 2. ดักจับและซ่อมแซมปุ่มสวิตช์ Toggle บนหน้าต่าง Fluent UI ให้สั่งงานตรงสาย
--- (ตรรกะนี้จะวิ่งไปเคลียร์และผูกคำสั่ง Callback ของปุ่มเปิด-ปิดหน้าบ้านให้มาคุมตัวแปรลูปโดยตรง)
-if _G.AutoCollectToggle then
-    _G.AutoCollectToggle:OnChanged(function(Value)
-        _G.AutoFarmRunning = Value
-        if Value and type(FarmLogic) == "function" then
-            task.spawn(function()
-                FarmLogic() -- เรียกตัวฟังก์ชันลูปทำงานทันทีเมื่อเปิดสวิตช์
-            end)
-        end
-    end)
-end
+task.spawn(function()
+    -- 2. โหลด Fuel Library (สร้าง UI แกนกลาง + ปุ่มลอย)
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/%E0%B8%97%E0%B8%94%E0%B8%AA%E0%B8%AD%E0%B8%9A/Fuel%20Library
+"))()
+    task.wait(0.5) -- รอระบบ UI เซ็ตอัปโครงสร้าง 0.5 วินาที
+    
+    -- 3. โหลด Logic ฟาร์มหลักเข้ามาเสียบปลั๊กสร้างปุ่ม Toggle ทำงานร่วมกัน ทันที
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/%E0%B8%97%E0%B8%94%E0%B8%AA%E0%B8%AD%E0%B8%9A/logi
+"))()
+end)
