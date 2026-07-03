@@ -1,22 +1,80 @@
--- [[ 🛑 โซนที่ 1.9: วนลูปรอจนกว่าหน้าต่าง UI หน้าบ้านจะโหลดเซ็ตค่าเสร็จ By.HxHDDD 🛑 ]]
+-- [[ 🛑 โซนที่ 1: ตรรกะฟังก์ชันวาร์ปและสแกนไดนามิก (By.HxHDDD) 🛑 ]]
 
--- เปลี่ยนมาใช้ตัวแปรแชร์ร่วมแกนหลักเดียวกัน เพื่อดึงข้อมูลมาแสดงปุ่มทันที
-repeat task.wait(0.5) until _G.HxHDDD_MainTab
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
-local MainTab = _G.HxHDDD_MainTab
+-- ฟังก์ชันแกนหลักสำหรับวาร์ปและสั่งกด ProximityPrompt แบบเซฟเครื่องมือถือ
+local function interactWithPrompt(prompt)
+    if not prompt or not prompt:IsA("ProximityPrompt") then return end
+    
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local targetPart = prompt.Parent:IsA("Model") and prompt.Parent.PrimaryPart or prompt.Parent
+    
+    if targetPart and targetPart:IsA("BasePart") then
+        -- 1. วาร์ปตัวละครเข้าไปประชิดในระยะปลอดภัย
+        rootPart.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+        
+        -- ดีเลย์ 0.2 วินาทีเพื่อให้โทรศัพท์ไม่แรงโหลดฉาก/วัตถุทันก่อนกด
+        task.wait(0.2) 
+        
+        local originalRequiresLineOfSight = prompt.RequiresLineOfSight
+        local originalMaxDistance = prompt.MaxActivationDistance
+        
+        prompt.RequiresLineOfSight = false
+        prompt.MaxActivationDistance = 9999
+        
+        -- 2. สั่งเริ่มกดค้างไว้ตามเวลาของไอเทมนั้นๆ + 0.05 กันหลุด
+        prompt:InputHoldBegin()
+        task.wait(prompt.HoldDuration + 0.05)
+        prompt:InputHoldEnd()
+        
+        -- คืนค่าดั้งเดิม
+        prompt.RequiresLineOfSight = originalRequiresLineOfSight
+        prompt.MaxActivationDistance = originalMaxDistance
+        
+        -- ดีเลย์อีก 0.2 วินาทีหลังเก็บเสร็จ เพื่อให้ระบบเซิร์ฟเวอร์บันทึกข้อมูลทัน
+        task.wait(0.2)
+    end
+end
 
+-- ฟังก์ชันกวาดหาวัตถุในทุกโฟลเดอร์ตัวเลขแบบ Dynamic (เช่น "12_11", "11_9")
+local function findPromptDynamic(objectName, subPath)
+    local gameMap = workspace:FindFirstChild("GameMap")
+    if not gameMap then return nil end
+    
+    -- วนลูปกวาดเช็คทุก Folder ที่อยู่ภายใต้ GameMap เพื่อให้ฟาร์มได้ทุกโซน
+    for _, zoneFolder in ipairs(gameMap:GetChildren()) do
+        local mainObj = zoneFolder:FindFirstChild(objectName)
+        if mainObj then
+            local prompt = mainObj
+            for segment in string.gmatch(subPath, "[^%.]+") do
+                prompt = prompt and prompt:FindFirstChild(segment)
+            end
+            if prompt then
+                return prompt
+            end
+        end
+    end
+    return nil
+end
 
--- [[ 🛑 โซนที่ 2: โครงสร้างการสร้างปุ่ม Toggle ลูปอัตโนมัติ ลิงก์เข้ากับ UI 🛑 ]]
-
--- ตัวแปรเก็บสถานะเปิด/ปิดบอทของแต่ละหัวข้อ
+-- ตัวแปรเก็บสถานะการเปิด-ปิดลูปของแต่ละหัวข้อ
 local Flags = {
     DarkTower = false,
     StandardTreasure = false,
     Carrot = false
 }
 
+
+-- [[ 🛑 โซนที่ 1.9: วนลูปรอจนกว่าหน้าต่าง UI หน้าบ้านจะโหลดเซ็ตค่าเสร็จ 🛑 ]]
+repeat task.wait(0.5) until _G.HxHDDD_MainTab
+local MainTab = _G.HxHDDD_MainTab
+
+
+-- [[ 🛑 โซนที่ 2: โครงสร้างการสร้างปุ่ม Toggle ลูปอัตโนมัติ ลิงก์เข้ากับ UI 🛑 ]]
 if MainTab then
-    -- 1. สวิตช์ลูปฟาร์ม Dark Tower (กวาดหาทุกโฟลเดอร์ตัวเลข)
+    -- 1. สวิตช์ลูปฟาร์ม Dark Tower
     MainTab:AddToggle("DarkTowerLoop", {
         Title = "Auto Farm: Dark Tower",
         Default = false,
@@ -28,7 +86,7 @@ if MainTab then
                     if prompt then 
                         interactWithPrompt(prompt) 
                     else 
-                        task.wait(0.5) 
+                        task.wait(0.5) -- หากหาไม่เจอให้รอแป๊บหนึ่งกันโค้ดรันไวเกินไป
                     end
                     task.wait(0.1)
                 end
@@ -36,7 +94,7 @@ if MainTab then
         end
     })
 
-    -- 2. สวิตช์ลูปฟาร์ม Standard Treasure (กวาดหาทุกโฟลเดอร์ตัวเลข)
+    -- 2. สวิตช์ลูปฟาร์ม Standard Treasure
     MainTab:AddToggle("StandardTreasureLoop", {
         Title = "Auto Farm: Standard Treasure",
         Default = false,
@@ -56,7 +114,7 @@ if MainTab then
         end
     })
 
-    -- 3. สวิตช์ลูปฟาร์ม Carrot (กวาดหาทุกโฟลเดอร์ตัวเลข)
+    -- 3. สวิตช์ลูปฟาร์ม Carrot
     MainTab:AddToggle("CarrotLoop", {
         Title = "Auto Farm: Carrot",
         Default = false,
