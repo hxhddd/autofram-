@@ -1,22 +1,32 @@
--- [[ 🛑 โซนที่ 2: หน้าบ้านสร้าง GUI และปุ่มลอยสำเร็จรูป (By.HxHDDD v3.2) 🛑 ]]
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local CoreGui = game:GetService("CoreGui")
-local UserInputService = game:GetService("UserInputService")
-local Config = _G.ButtonConfig or { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2 }
+-- [[ 🛑 โซนที่ 2: Fuel Library สำเร็จรูป แกนหลัก UI By.HxHDDD 🛑 ]]
+-- บันทึกโค้ดแก้ไขใหม่นี้ไว้ที่ลิงก์เดิมของคุณ: https://pastebin.com/raw/0V1q1P0f
 
--- สร้างหน้าต่าง GUI
-local Window = Fluent:CreateWindow({
-    Title = "Auto Farm Hub",
-    SubTitle = "v3.2 | By.HxHDDD",
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local BaseConfigUrl = _G.PastebinRawUrl or "https://pastebin.com/raw/9vk160L8"
+
+-- ดึงค่า JSON มาเสกปุ่มลอยสำเร็จรูป (ป้องการ Error 404)
+local Success, ConfigData = pcall(function() 
+    return game:GetService("HttpService"):JSONDecode(game:HttpGet(BaseConfigUrl)) 
+end)
+local ButtonConfig = Success and ConfigData or { button_text = "🔮", button_size_x = 50, button_size_y = 50, default_pos_x = 0.05, default_pos_y = 0.2 }
+
+-- [สร้างหน้าต่างหลักแชร์ผ่านสากล _G]
+_G.HxHDDD_Window = Fluent:CreateWindow({
+    Title = _G.ProjectName or "Auto Farm Hub",
+    SubTitle = _G.ProjectVersion or "v1.0 | By.HxHDDD",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
     Theme = "Dark"
 })
 
-local MainTab = Window:AddTab({ Title = "ฟาร์มหลัก", Icon = "home" })
+-- สร้างแท็บหลักทิ้งไว้ให้ Logic เอาไปเรียกใช้
+_G.HxHDDD_MainTab = _G.HxHDDD_Window:AddTab({ Title = "ฟาร์มหลัก", Icon = "home" })
 
--- สร้างวัตถุปุ่มลอย (🔮) 
+-- เสกปุ่มลอยควบคุมสำหรับมือถือ
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+
 if CoreGui:FindFirstChild("HxHDDD_FloatUI") then CoreGui["HxHDDD_FloatUI"]:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -26,9 +36,9 @@ ScreenGui.Parent = CoreGui
 
 local Button = Instance.new("TextButton")
 Button.Name = "MainButton"
-Button.Text = Config.button_text
-Button.Size = UDim2.fromOffset(Config.button_size_x, Config.button_size_y)
-Button.Position = UDim2.fromScale(Config.default_pos_x, Config.default_pos_y)
+Button.Text = ButtonConfig.button_text
+Button.Size = UDim2.fromOffset(ButtonConfig.button_size_x, ButtonConfig.button_size_y)
+Button.Position = UDim2.fromScale(ButtonConfig.default_pos_x, ButtonConfig.default_pos_y)
 Button.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 Button.TextColor3 = Color3.fromRGB(255, 255, 255)
 Button.Font = Enum.Font.GothamBold
@@ -44,7 +54,7 @@ UIStroke.Color = Color3.fromRGB(138, 43, 226)
 UIStroke.Thickness = 1.5
 UIStroke.Parent = Button
 
--- ตรรกะลากย้ายปุ่มลอยสำหรับมือถือ
+-- ระบบลากนิ้วปุ่มลอยบนจอมือถืออย่างอิสระ
 local dragging, dragInput, dragStart, startPos
 Button.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -64,15 +74,18 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- ผูกระบบย่อพับหน้าต่าง
+-- 🛠️ ปรับแก้ตรรกะระบบย่อพับสลับสถานะหน้าต่าง Fluent UI ให้ทำงานได้จริงบนมือถือ
 Button.MouseButton1Click:Connect(function()
-    if Window then Window:Toggle() end
+    local WindowInstance = _G.HxHDDD_Window
+    if WindowInstance then
+        -- 1. เช็กผ่าน Property ย่อส่วนมาตรฐาน (Minimized) ของ Fluent UI
+        if WindowInstance.Minimized ~= nil then
+            WindowInstance:Minimize(not WindowInstance.Minimized)
+        -- 2. รองรับกรณีบางเวอร์ชันใช้การซ่อน Frame หลักโดยตรง
+        elseif WindowInstance.Frame then
+            WindowInstance.Frame.Visible = not WindowInstance.Frame.Visible
+        end
+    end
 end)
 
--- สร้างปุ่มสวิตช์และส่งออกไปที่ Global เพื่อให้สคริปต์โหลดหลักนำไปใช้สั่งงานต่อได้
-_G.AutoCollectToggle = MainTab:AddToggle("AutoCollectToggle", {
-    Title = "เปิด Auto Collect (กวาดล้างยกแผง)",
-    Default = false
-})
-
-return Window
+print("✅ [Fuel Library By.HxHDDD] Setup Completed Successfully with Fixed Toggle!")
