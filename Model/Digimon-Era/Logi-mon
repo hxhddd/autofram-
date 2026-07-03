@@ -1,58 +1,83 @@
--- [[ 🛑 โซนที่ 1: ตรรกะฟังก์ชันวาร์ปและสแกนไดนามิก (ระบบพิกัดติดลบ + ยิงรีโมท + คูลดาวน์เกิดซ้ำ 3 นาที) 🛑 ]]
+-- [[ 🛑 โซนที่ 1: ตรรกะฟังก์ชันวาร์ป + ระบบยิงรีโมทพื้นหลัง CollectEvent (รองรับพิกัดติดลบ + คูลดาวน์ 3 นาที) 🛑 ]]
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
--- ตารางสำหรับเก็บประวัติพิกัดออบเจ็กต์ที่ถูกเก็บไปแล้วชั่วคราว
+-- ลิงก์ตรงเข้าสู่ Remote Event สำหรับสั่งเก็บไอเทมของตัวเกม
+local CollectEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("CollectEvent")
+
+-- ตารางคูลดาวน์ 3 นาที ป้องกันการวนซ้ำจุดเดิมที่เพิ่งเก็บไป
 local Cooldowns = {}
 
--- ฟังก์ชันยิงกด ProximityPrompt แบบรีโมทประชิด (เร่งความเร็ว + เช็คของหาย)
+-- ฟังก์ชันพิเศษ: ค้นหาและรัวรีโมทเก็บไอเทมทุกชิ้นรอบตัวทันที (ทำงานเป็นเบื้องหลัง)
+local function fireCollectEventAroundPlayer()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+
+    -- ค้นหาอ็อบเจกต์รอบตัวในระยะ 15 Studs เพื่อส่งยิงเซิร์ฟเวอร์โดยตรง
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        -- ตรวจสอบเงื่อนไขว่าวัตถุมีตำแหน่งและอยู่ใกล้ตัวละครในระยะประชิด
+        if obj:IsA("BasePart") and (obj.Position - rootPart.Position).Magnitude <= 15 then
+            -- ยิง Remote เคลียร์ไอเทมทันที ข้ามขั้นตอนการรอโหลด ProximityPrompt
+            pcall(function()
+                CollectEvent:FireServer(obj)
+            end)
+        end
+    end
+end
+
+-- ฟังก์ชันหลักควบคุมการวาร์ปและสั่งกด (ยิงทั้ง Remote บดขยี้ปุ่ม และสั่งยิง Event พื้นหลังคู่ขนาน)
 local function interactWithPrompt(prompt)
-    if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Parent then return end
+    if not prompt or not prompt.Parent then return end
     
     local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local rootPart = character:WaitForChild("HumanoidRootPart")
     local targetPart = prompt.Parent:IsA("Model") and prompt.Parent.PrimaryPart or prompt.Parent
     
     if targetPart and targetPart:IsA("BasePart") then
-        -- 1. วาร์ปตัวละครเข้าประชิดพิกัดเพื่อให้ตำแหน่งฝั่งเซิร์ฟเวอร์อัปเดตทัน
-        rootPart.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
-        task.wait(0.15) -- ดีเลย์จังหวะแรกให้ตัวละครเสถียรบนพิกัดฉากใหม่
-        
-        if not prompt or not prompt.Parent then return end
-        
-        -- ดึงพิกัดตำแหน่งหรือตัว Object หลักมาเป็น Key ในการทำบันทึกคูลดาวน์
         local itemKey = targetPart.Position
         
-        -- 2. สั่งยิงคำสั่งกดแบบ Remote ทันที (เร่งความเร็วข้ามแอนิเมชันสำหรับมือถือ)
-        pcall(function()
-            fireproximityprompt(prompt, 0)
-        end)
+        -- 1. วาร์ปกระโดดเข้าประชิดจุดวัตถุเป้าหมาย
+        rootPart.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+        task.wait(0.1) -- ใช้ดีเลย์สั้นลงเพราะมีระบบยิงรีโมทเคลียร์พื้นหลังมารับช่วงต่อแล้ว
         
-        -- 3. ลูปรอเช็คสถานะจนกว่าวัตถุจะสลายหายไปจริง (สูงสุดไม่เกิน 0.3 วินาที กันบอทติดบั๊กค้างคาที่)
-        local timeOut = 0
-        while prompt and prompt.Parent and timeOut < 0.3 do
-            task.wait(0.05)
-            timeOut = timeOut + 0.05
+        -- 🔥 [ระบบเสริมความไว]: สั่งยิงรีโมทเก็บของรอบตัวทันทีในพื้นหลัง ไม่ต้องง้อปุ่มโผล่!
+        task.spawn(fireCollectEventAroundPlayer)
+        
+        -- 2. สั่งกดปุ่มผ่าน fireproximityprompt คู่ขนานกันไป (กันเหนียวสำหรับของบางชิ้นที่ต้องใช้ปุ่ม)
+        if prompt:IsA("ProximityPrompt") then
+            pcall(function()
+                fireproximityprompt(prompt, 0)
+            end)
         end
         
-        -- บันทึกเวลาปัจจุบันลงในระบบคูลดาวน์ (จำไว้ 3 นาที เพื่อให้กลับมาเกิดซ้ำแล้วเก็บใหม่ได้)
-        Cooldowns[itemKey] = os.time()
+        -- 3. ลูปรอเช็คจนกว่าของจะสลายตัว (สูงสุดสปีดไว 0.25 วินาที บอทจะได้ไม่ยืนแช่คาที่)
+        local timeOut = 0
+        while prompt and prompt.Parent and timeOut < 0.25 do
+            task.wait(0.05)
+            timeOut = timeOut + 0.05
+            -- ยิงซ้ำระหว่างรอเพื่อความชัวร์
+            task.spawn(fireCollectEventAroundPlayer)
+        end
         
-        task.wait(0.05)
+        -- บันทึกจำคูลดาวน์พื้นที่นี้ไว้ 3 นาที (180 วินาที) ก่อนสลัดตัวย้ายจุด
+        Cooldowns[itemKey] = os.time()
+        task.wait(0.02)
     end
 end
 
--- ฟังก์ชันกวาดหาวัตถุแบบไดนามิก: รองรับชื่อโฟลเดอร์พิกัดเลขติดลบ และระบบข้ามจุดที่ติดคูลดาวน์ 3 นาที
+-- ฟังก์ชันสแกนหาพิกัดพื้นที่แบบ Dynamic รองรับทั้งโซนเลขบวกและเลขติดลบ
 local function findPromptDynamic(objectName, subPath)
     local gameMap = workspace:FindFirstChild("GameMap")
     if not gameMap then return nil end
     
-    -- กวาดเช็คทุก Folder/Model ใน GameMap โดยไม่สนใจว่าชื่อจะเป็นพิกัดเลขบวกหรือเลขลบ
     for _, zoneFolder in ipairs(gameMap:GetChildren()) do
         local mainObj = zoneFolder:FindFirstChild(objectName)
         if mainObj then
-            -- แกะสลัก Path ลงไปหาพิกัด ProximityPrompt
+            -- ดักแกะสลักพิกัดโครงสร้างลงไปหาเป้าหมายหลัก
             local prompt = mainObj
             for segment in string.gmatch(subPath, "[^%.]+") do
                 if prompt then
@@ -62,22 +87,25 @@ local function findPromptDynamic(objectName, subPath)
                 end
             end
             
-            -- ตรวจสอบความสมบูรณ์ของ Prompt
-            if prompt and prompt:IsA("ProximityPrompt") and prompt.Parent then
-                local targetPart = prompt.Parent:IsA("Model") and prompt.Parent.PrimaryPart or prompt.Parent
-                if targetPart and targetPart:IsA("BasePart") then
+            -- ปรับปรุงตรรกะใหม่: ถึงแม้ปุ่ม ProximityPrompt จะยังไม่โหลดมา แต่ถ้าเจอโมเดลหลักโผล่มาแล้ว ให้สลัดค่ากลับไปล็อกเป้าได้ทันที!
+            if mainObj:IsA("Model") or mainObj:IsA("BasePart") then
+                local targetPart = mainObj:IsA("Model") and mainObj.PrimaryPart or mainObj
+                if not targetPart then targetPart = mainObj:FindFirstChildWhichIsA("BasePart") end
+                
+                if targetPart then
                     local itemKey = targetPart.Position
                     
-                    -- เช็คว่าจุดนี้เคยเก็บไปหรือยัง ถ้าเคยเก็บแล้วและยังไม่ครบ 3 นาที (180 วินาที) ให้ข้ามไปก่อน
+                    -- เช็คระบบเวลาปลดล็อกคูลดาวน์ 3 นาที
                     if Cooldowns[itemKey] then
                         if os.time() - Cooldowns[itemKey] < 180 then
-                            continue -- ข้ามจุดนี้ไปหาจุดอื่นที่พร้อมฟาร์ม
+                            continue 
                         else
-                            Cooldowns[itemKey] = nil -- ครบ 3 นาทีแล้ว ปลดล็อกล้างค่าออกให้กลับมาฟาร์มใหม่ได้
+                            Cooldowns[itemKey] = nil 
                         end
                     end
                     
-                    return prompt
+                    -- ส่งค่ากลับไปรันฟังก์ชันเก็บทันที (กรณีเจอ Prompt ตรงๆ จะทำงานสมบูรณ์ที่สุด)
+                    return prompt or targetPart
                 end
             end
         end
@@ -85,7 +113,7 @@ local function findPromptDynamic(objectName, subPath)
     return nil
 end
 
--- ตัวแปรเก็บสถานะการเปิด-ปิดลูปของแต่ละหัวข้อ
+-- ตัวแปรเก็บสถานะการทำงานบอท
 local Flags = {
     DarkTower = false,
     StandardTreasure = false,
@@ -113,9 +141,9 @@ if MainTab then
                     if prompt then 
                         interactWithPrompt(prompt) 
                     else 
-                        task.wait(0.3)
+                        task.wait(0.2)
                     end
-                    task.wait(0.05)
+                    task.wait(0.02)
                 end
             end)
         end
@@ -133,9 +161,9 @@ if MainTab then
                     if prompt then 
                         interactWithPrompt(prompt) 
                     else 
-                        task.wait(0.3) 
+                        task.wait(0.2) 
                     end
-                    task.wait(0.05)
+                    task.wait(0.02)
                 end
             end)
         end
@@ -153,15 +181,15 @@ if MainTab then
                     if prompt then 
                         interactWithPrompt(prompt) 
                     else 
-                        task.wait(0.3) 
+                        task.wait(0.2) 
                     end
-                    task.wait(0.05)
+                    task.wait(0.02)
                 end
             end)
         end
     })
 
-    -- 4. สวิตช์ลูปฟาร์ม Royal Treasure (ตัวซ่อนลึกพิกัดติดลบ)
+    -- 4. สวิตช์ลูปฟาร์ม Royal Treasure (กล่องสมบัติยักษ์พิกัดติดลบ)
     MainTab:AddToggle("RoyalTreasureLoop", {
         Title = "Auto Farm: Royal Treasure",
         Default = false,
@@ -173,9 +201,9 @@ if MainTab then
                     if prompt then 
                         interactWithPrompt(prompt) 
                     else 
-                        task.wait(0.3) 
+                        task.wait(0.2) 
                     end
-                    task.wait(0.05)
+                    task.wait(0.02)
                 end
             end)
         end
