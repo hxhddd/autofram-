@@ -1,65 +1,63 @@
 -- [[ 🛑 โซนที่ 3: Main Logic & Auto Chest Farm 🛑 ]]
 
 local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 local LocalPlayer = Players.LocalPlayer
 
 -- ตารางคูลดาวน์ 3 นาที (180 วินาที) และสถานะปุ่ม
 local Cooldowns = {}
 local AutoChestEnabled = false
 
--- 1. ฟังก์ชันวาร์ปตัดพิกัดตรงๆ ไปยัง Layout ทันที (Instant Warp)
-local function warpToTarget(targetPart)
+-- 1. ฟังก์ชันวาร์ปตัดพิกัดตรงๆ ไปตำแหน่งพิกัดโลกของ Root (Instant Warp ห้ามใช้ Layout ป้องกันตกแมพ)
+local function warpToTarget(rootPart)
     local character = LocalPlayer.Character
     local hrp = character and character:FindFirstChild("HumanoidRootPart")
     if not hrp then return false end
     
-    -- วาร์ปตัดพิกัดไปตำแหน่ง Layout ตรงๆ
-    hrp.CFrame = targetPart.CFrame
-    task.wait(0.1) -- ดีเลย์สั้นๆ ให้ระบบเกมอัปเดตตำแหน่งพิกัดตัวละคร
+    -- วาร์ปตัดพิกัดเข้าจุดกึ่งกลางของกล่องตรงๆ 
+    hrp.CFrame = rootPart.CFrame
+    task.wait(0.15) -- ดีเลย์เพื่อให้ระบบตัวเกมอัปเดตและรับรู้พิกัดใหม่
     return true
 end
 
--- 2. ฟังก์ชันหลักในการเข้าทำกล่อง กดปุ่มปกติ และยืนแช่ 3 วินาที
-local function interactWithChest(chest, prompt, layoutPart)
-    if not layoutPart or not layoutPart:IsA("BasePart") then return end
-    local itemKey = layoutPart.Position
+-- 2. ฟังก์ชันหลักในการวาร์ป แช่ตัว และส่งสัญญาณจำลองกดปุ่ม E
+local function interactWithChest(chest, rootPart)
+    if not rootPart or not rootPart:IsA("BasePart") then return end
+    local itemKey = rootPart.Position
     
-    local arrived = warpToTarget(layoutPart)
+    local arrived = warpToTarget(rootPart)
     if arrived then
-        -- สั่งกดปุ่มรูปแบบปกติของเรา
-        if prompt and prompt:IsA("ProximityPrompt") then
-            pcall(function() 
-                fireproximityprompt(prompt) 
-            end)
-        end
+        -- 🔥 เปลี่ยนระบบกด: ใช้การจำลองการกดปุ่ม E บนแป้นพิมพ์ค้างไว้ (รองรับมือถือและแก้ปัญหากดไม่ติด)
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
         
-        -- เงื่อนไขพิเศษ: สั่งให้ยืนแช่เอาไว้ตรงกล่องหลังกดไปแล้วเป็นเวลา 3 วินาที
+        -- เงื่อนไข: สั่งให้ตัวละครยืนแช่นิ่งอยู่กับที่ตรงพิกัดกล่องนั้น 3 วินาทีเต็ม เพื่อให้ระบบเกมเปิดกล่องสำเร็จ
         task.wait(3)
         
-        -- บันทึกจำคูลดาวน์พื้นที่นี้ไว้ 3 นาที (180 วินาที)
+        -- ปล่อยปุ่ม E หลังจากยืนแช่ครบเวลาเรียบร้อยแล้ว
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+        
+        -- บันทึกจำพิกัดนี้ลงตารางคูลดาวน์ Blacklist ชั่วคราว 3 นาที (180 วินาที)
         Cooldowns[itemKey] = os.time()
-        task.wait(0.02)
+        task.wait(0.05)
     end
 end
 
--- 3. ฟังก์ชันสแกนหาพิกัดพื้นที่ของ Chest ในโฟลเดอร์แบบเจาะจง Layout
+-- 3. ฟังก์ชันสแกนหาพิกัดพื้นที่กล่องในโฟลเดอร์แบบ Dynamic และคัดกรอง Blacklist
 local function findChestDynamic()
     local chestFolder = workspace:FindFirstChild("RuntimeCache") 
         and workspace.RuntimeCache:FindFirstChild("RuntimeCacheClient") 
         and workspace.RuntimeCache.RuntimeCacheClient:FindFirstChild("Chest")
 
-    if not chestFolder then return nil, nil, nil end
+    if not chestFolder then return nil, nil end
 
     for _, chest in ipairs(chestFolder:GetChildren()) do
-        local layout = chest:FindFirstChild("Layout")
         local root = chest:FindFirstChild("Root")
-        local prompt = root and root:FindFirstChild("Prompt")
         
-        -- ตรวจสอบว่ามี Layout และพิกัดพร้อมให้วาร์ป
-        if layout and layout:IsA("BasePart") then
-            local itemKey = layout.Position
+        -- ตรวจสอบว่ามีชิ้นส่วน Root หลักเพื่อดึง CFrame โลกจริง
+        if root and root:IsA("BasePart") then
+            local itemKey = root.Position
             
-            -- เช็คระบบเวลาปลดล็อกคูลดาวน์ 3 นาที
+            -- ตรวจสอบประวัติระบบเวลาปลดล็อกคูลดาวน์ 3 นาที
             if Cooldowns[itemKey] then
                 if os.time() - Cooldowns[itemKey] < 180 then
                     continue 
@@ -68,36 +66,37 @@ local function findChestDynamic()
                 end
             end
             
-            return chest, prompt, layout
+            return chest, root
         end
     end
-    return nil, nil, nil
+    return nil, nil
 end
 
--- 4. รวบตรรกะสร้างปุ่มสวิตช์และลูปการทำงานหลักไว้ร่วมกัน
+-- 4. รวบตรรกะสร้างปุ่มสวิตช์และลูปการทำงานหลักไว้ในกระทู้คู่ขนานเดียวกัน เพื่อไม่ให้บล็อกโค้ดส่วนอื่น
 task.spawn(function()
-    -- วนลูปรอจนกว่าหน้าต่าง UI หน้าบ้านจะโหลดเซ็ตค่าเสร็จ
+    -- วนลูปรอจนกว่าหน้าต่าง UI หน้าบ้านจะโหลดเซ็ตค่าเสร็จสมบูรณ์
     while not _G.HxHDDD_MainTab do 
         task.wait(0.5) 
     end
     local MainTab = _G.HxHDDD_MainTab
 
-    -- สร้างปุ่ม Toggle เสียบปลั๊กเข้าไปในระบบทันที
+    -- สร้างปุ่ม Toggle เสียบปลั๊กรวมเข้ากับหน้าต่างหลักทันที
     MainTab:AddToggle("AutoChestLoop", {
         Title = "Auto Farm: Open Chest",
-        Description = "วาร์ปตัดพิกัดเข้า Layout ยืนแช่ 3 วิ พร้อมคูลดาวน์เลี่ยงจุดเดิม 3 นาที (By.HxHDDD)",
+        Description = "วาร์ปตัดพิกัด Root จำลองกดปุ่ม E ยืนแช่ 3 วิ พร้อมคูลดาวน์ 3 นาที (By.HxHDDD)",
         Default = false,
         Callback = function(Value)
             AutoChestEnabled = Value
             
+            -- เมื่อสวิตช์เปิดทำงาน ให้ระบบสแกนวาร์ปทำกล่องคู่ขนานทันที
             if AutoChestEnabled then
                 task.spawn(function()
                     while AutoChestEnabled do
-                        local chest, prompt, layout = findChestDynamic()
-                        if chest and layout then 
-                            interactWithChest(chest, prompt, layout) 
+                        local chest, root = findChestDynamic()
+                        if chest and root then 
+                            interactWithChest(chest, root) 
                         else 
-                            task.wait(0.3) -- พักสแกนสั้นๆ หากยังไม่มีกล่องใหม่เกิดในโฟลเดอร์
+                            task.wait(0.5) -- พักตรวจสแกนสั้นๆ หากยังไม่มีกล่องใหม่เกิดในระบบ
                         end
                         task.wait(0.02)
                     end
