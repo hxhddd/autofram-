@@ -1,0 +1,15 @@
+-- [[ 🛑 โซนที่ 1: Loader รวมร่างแนวราบ 3-Combo By.HxHDDD 🛑 ]]
+-- Project: Event Farm Control v1.0 | Style: Modern Flat UI
+
+_G.ProjectName = "Event Farm Control"
+_G.ProjectVersion = "v1.0"
+_G.PastebinRawUrl = "https://pastebin.com/raw/9vk160L8" -- 1. ลิงก์ปุ่มคอนฟิก
+
+task.spawn(function()
+    -- 2. โหลด Fuel Library (สร้าง UI แกนกลาง + ปุ่มลอย)
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Fluent_UI_Library"))()
+    task.wait(0.5) -- รอระบบ UI เซ็ตอัปโครงสร้าง 0.5 วินาที
+    
+    -- 3. โหลด Logic ฟาร์มหลักเข้ามาเสียบปลั๊กสร้างปุ่ม Toggle ทำงานร่วมกัน ทันที
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/evomon/logi-1"))()
+end)
