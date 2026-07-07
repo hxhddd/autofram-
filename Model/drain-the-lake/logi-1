@@ -1,0 +1,88 @@
+-- [[ 🛑 โซนที่ 1: Main Logic Loops (ตัวควบคุมเบื้องหลัง) 🛑 ]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local VerdantRemotes = ReplicatedStorage:WaitForChild("VerdantRemotes")
+local BucketUsed = VerdantRemotes:WaitForChild("VDT_Bucket.Used")
+local BucketPoured = VerdantRemotes:WaitForChild("VDT_Bucket.Poured")
+local TokensTake = VerdantRemotes:WaitForChild("VDT_Tokens.Take")
+
+-- Global Flags สำหรับให้ปุ่มสวิตช์ใน UI มาดึง/เปลี่ยนค่าสถานะ
+_G.AutoBucketUsed = false
+_G.AutoBucketPoured = false
+_G.AutoTokensTake = false
+
+-- รันลูปทั้ง 3 ชุดแยก Thread อิสระ (เปิดพร้อมกันได้ ไม่ขัดจังหวะกัน)
+task.spawn(function()
+    while true do
+        if _G.AutoBucketUsed then
+            pcall(function()
+                BucketUsed:FireServer()
+            end)
+        end
+        task.wait(0.1)
+    end
+end)
+
+task.spawn(function()
+    while true do
+        if _G.AutoBucketPoured then
+            pcall(function()
+                local args = {
+                    Workspace:WaitForChild("Scripted"):WaitForChild("CheckpointParts"):WaitForChild("1"):WaitForChild("Drain"):WaitForChild("Scripted"):WaitForChild("ProximityPosition"):WaitForChild("ProximityPrompt")
+                }
+                BucketPoured:FireServer(unpack(args))
+            end)
+        end
+        task.wait(0.1)
+    end
+end)
+
+task.spawn(function()
+    while true do
+        if _G.AutoTokensTake then
+            pcall(function()
+                local args = {
+                    Workspace:WaitForChild("Scripted"):WaitForChild("CheckpointParts"):WaitForChild("1"):WaitForChild("Drain"):WaitForChild("Scripted"):WaitForChild("ProximityPosition"):WaitForChild("ProximityPrompt")
+                }
+                TokensTake:FireServer(unpack(args))
+            end)
+        end
+        task.wait(0.1)
+    end
+end)
+
+---
+
+-- [[ 🛑 โซนที่ 2: UI Connect Setup (คำสั่งเรียกสร้างปุ่มเข้า Fluent) 🛑 ]]
+
+-- ฟังก์ชันสำหรับให้โค้ดหน้าบ้านเรียกใช้ โดยส่งอ็อบเจกต์ Tab ของ Fluent เข้ามา
+-- เพื่อสั่งเสกปุ่มทุกลอจิกที่แยกกันให้ไปโผล่และทำงานร่วมกับระบบปุ่มย่อพับอัตโนมัติ
+function HookVerdantToggles(TargetTab)
+    
+    TargetTab:AddToggle("AutoBucketUsedToggle", {
+        Title = "Auto Use Bucket",
+        Default = false,
+        Callback = function(Value)
+            _G.AutoBucketUsed = Value
+        end
+    })
+
+    TargetTab:AddToggle("AutoBucketPouredToggle", {
+        Title = "Auto Pour Bucket",
+        Default = false,
+        Callback = function(Value)
+            _G.AutoBucketPoured = Value
+        end
+    })
+
+    TargetTab:AddToggle("AutoTokensTakeToggle", {
+        Title = "Auto Take Tokens",
+        Default = false,
+        Callback = function(Value)
+            _G.AutoTokensTake = Value
+        end
+    })
+
+end
