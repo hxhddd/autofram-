@@ -42,11 +42,10 @@ task.spawn(function()
         end
     })
 
-    -- ปุ่มที่ 2: Auto Pour Bucket
-        -- ปุ่มที่ 2: Auto Pour Bucket (เวอร์ชันอัปเกรด ค้นหาเช็คพอยท์อัตโนมัติตามตำแหน่งตัวเรา)
+        -- ปุ่มที่ 2: Auto Pour Bucket (เวอร์ชันแก้ทางโครงสร้างมั่ว - สแกนหาวัตถุ Drain ที่ใกล้ที่สุดโดยตรง)
     MainTab:AddToggle("AutoBucketPouredLoop", {
         Title = "Auto Pour Bucket",
-        Description = "เทน้ำใส่ท่อระบายน้ำตามเช็คพอยท์ที่อยู่ใกล้ที่สุดอัตโนมัติ (By.HxHDDD)",
+        Description = "เทน้ำใส่ท่อระบายน้ำที่ใกล้ที่สุดโดยคำนวณพิกัดระยะทางจริง (By.HxHDDD)",
         Default = false,
         Callback = function(Value)
             AutoBucketPoured = Value
@@ -55,25 +54,25 @@ task.spawn(function()
                 task.spawn(function()
                     while AutoBucketPoured do
                         pcall(function()
-                            -- 1. หาตำแหน่งของเราปัจจุบันก่อน
+                            -- 1. ดึงตำแหน่งตัวละครของเรา ณ ปัจจุบัน
                             local character = game:GetService("Players").LocalPlayer.Character
                             local hrp = character and character:FindFirstChild("HumanoidRootPart")
                             
                             if hrp then
-                                local checkpointParts = Workspace:WaitForChild("Scripted"):WaitForChild("CheckpointParts")
                                 local closestPrompt = nil
                                 local shortestDistance = math.huge
                                 
-                                -- 2. วนลูปหาเช็คพอยท์ที่อยู่ใกล้ตัวเรามากที่สุดในขณะนั้น
-                                for _, checkpoint in ipairs(checkpointParts:GetChildren()) do
-                                    local drain = checkpoint:FindFirstChild("Drain")
-                                    if drain then
-                                        local prompt = drain:FindFirstChild("Scripted") 
-                                            and drain.Scripted:FindFirstChild("ProximityPosition") 
-                                            and drain.Scripted.ProximityPosition:FindFirstChild("ProximityPrompt")
+                                -- 2. วนลูปค้นหาวัตถุชื่อ "Drain" ทั้งหมดที่มีอยู่ใน workspace โดยตรง
+                                -- ไม่สนใจว่าจะอยู่ในโฟลเดอร์ไหน หรือเรียงเลขหรือไม่
+                                for _, object in ipairs(Workspace:GetDescendants()) do
+                                    if object.Name == "Drain" and (object:IsA("Model") or object:IsA("Folder")) then
+                                        -- เจาะลึกหา ProximityPrompt ด้านในสุดตามโครงสร้างจริงใน Dex
+                                        local prompt = object:FindFirstChild("Scripted")
+                                            and object.Scripted:FindFirstChild("ProximityPosition")
+                                            and object.Scripted.ProximityPosition:FindFirstChild("ProximityPrompt")
                                             
                                         if prompt then
-                                            -- คำนวณระยะห่างระหว่างตัวเรากับจุดเทน้ำ
+                                            -- คำนวณระยะห่างทางกายภาพจริงระหว่างตัวเรากับท่อระบายน้ำ (.Magnitude)
                                             local distance = (hrp.Position - prompt.Parent.Position).Magnitude
                                             if distance < shortestDistance then
                                                 shortestDistance = distance
@@ -83,19 +82,20 @@ task.spawn(function()
                                     end
                                 end
                                 
-                                -- 3. ถ้าเจอจุดที่ใกล้ที่สุด ให้ส่งรีโมทเทน้ำไปที่จุดนั้นทันที
+                                -- 3. เมื่อเจอจุด Drain ที่ใกล้ตัวเราที่สุดแล้ว ให้ยิงรีโมทไปที่จุดนั้นทันที
                                 if closestPrompt then
                                     local args = { closestPrompt }
                                     BucketPoured:FireServer(unpack(args))
                                 end
                             end
                         end)
-                        task.wait(0.1)
+                        task.wait(0.1) -- ดีเลย์วนลูปฟาร์มสั้นๆ ป้องกันเกมแลค
                     end
                 end)
             end
         end
     })
+
 
 
     -- ปุ่มที่ 3: Auto Take Tokens
