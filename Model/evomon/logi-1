@@ -1,0 +1,98 @@
+-- [[ 🛑 โซนที่ 3: Main Logic & Automation 🛑 ]]
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ตารางเก็บ Blacklist กล่องที่เปิดไปแล้วชั่วคราว (เก็บเป็นพิกัดหรือชื่อ ID เพื่อความแม่นยำ)
+local chestBlacklist = {}
+local BLACKLIST_TIME = 180 -- 3 นาที
+
+-- ฟังก์ชันสำหรับตรวจสอบ Blacklist
+local function isBlacklisted(chestName)
+    if chestBlacklist[chestName] and os.time() < chestBlacklist[chestName] then
+        return true
+    end
+    return false
+end
+
+-- ฟังก์ชันวาร์ปแบบปลอดภัย (ปรับ Speed ตามเกณฑ์ 25-30)
+local function warpToChest(targetPart)
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return false end
+    local hrp = LocalPlayer.Character.HumanoidRootPart
+    
+    local distance = (hrp.Position - targetPart.Position).Magnitude
+    local speed = 30 -- ความเร็วเซฟโซนตามมาตรฐานของคุณ
+    local duration = distance / speed
+    
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetPart.CFrame * CFrame.new(0, 3, 0)})
+    tween:Play()
+    tween.Completed:Wait()
+    task.wait(0.2)
+    return true
+end
+
+-- ฟังก์ชันหลักในการรันลูปฟาร์มกล่อง
+local function runChestFarm()
+    local chestFolder = workspace:FindFirstChild("RuntimeCache") 
+        and workspace.RuntimeCache:FindFirstChild("RuntimeCacheClient") 
+        and workspace.RuntimeCache.RuntimeCacheClient:FindFirstChild("Chest")
+
+    if not chestFolder then return end
+
+    for _, chest in ipairs(chestFolder:GetChildren()) do
+        if not _G.AutoChestFarm then break end -- เช็คสวิตช์เปิด/ปิด
+        
+        -- ตรวจสอบโครงสร้างกล่อง และ เช็คว่าติด Blacklist อยู่หรือไม่
+        local root = chest:FindFirstChild("Root")
+        local prompt = root and root:FindFirstChild("Prompt")
+        
+        if root and prompt and not isBlacklisted(chest.Name) then
+            -- 1. วาร์ปไปที่ Root ของกล่อง
+            local arrived = warpToChest(root)
+            if arrived and _G.AutoChestFarm then
+                
+                -- 2. สั่งกดแบบ Fire ProximityPrompt (จำลองรีโมทอีเว้นท์หน้าจอมือถือ)
+                task.spawn(function()
+                    fireproximityprompt(prompt)
+                end)
+                
+                -- 3. ลูปเช็คจนกว่ากล่องจะหายไปจาก Workspace (หรือสวิตช์ถูกปิด)
+                local timeout = 0
+                while chest:IsDescendantOf(workspace) and _G.AutoChestFarm and timeout < 5 do
+                    task.wait(0.1)
+                    timeout = timeout + 0.1
+                end
+                
+                -- 4. เมื่อกล่องหายไปแล้ว ทำการบันทึก Blacklist ชั่วคราว 3 นาที
+                chestBlacklist[chest.Name] = os.time() + BLACKLIST_TIME
+                task.wait(0.3) -- พักสั้นๆ ก่อนไปจุดต่อไป
+            end
+        end
+    end
+end
+
+-- ลูปบอททำงานหลักสำหรับสวิตช์ Auto Chest
+task.spawn(function()
+    while true do
+        if _G.AutoChestFarm then
+            local success, err = pcall(runChestFarm)
+            if not success then
+                warn("Chest Farm Error: " .. tostring(err))
+            end
+        end
+        task.wait(1)
+    end
+end)
+-- [[ 🛑 โซนที่ 2: Fluent UI Setup 🛑 ]]
+-- ไอเทมสำหรับสร้างปุ่มสวิตช์เปิด/ปิด ลอจิกฟาร์มกล่องสมบัติ
+
+Tabs.Main:AddToggle("AutoChestToggle", {
+    Title = "Auto Open Chest (3 Mins Blacklist)",
+    Description = "วาร์ปฟาร์มกล่องอัตโนมัติ พร้อมระบบเลี่ยงกล่องเดิม 3 นาที",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoChestFarm = Value
+    end
+})
