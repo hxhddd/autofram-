@@ -1,77 +1,118 @@
--- [[ 🛑 โซนที่ 3: Main Logic & Automation 🛑 ]]
+-- [[ 🛑 โซนที่ 3: Main Logic & Auto Chest Farm 🛑 ]]
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
-local chestBlacklist = {}
-local BLACKLIST_TIME = 180 -- 3 นาที
+-- ตารางคูลดาวน์ 3 นาที (180 วินาที) และสถานะปุ่ม
+local Cooldowns = {}
+local AutoChestEnabled = false
 
-local function isBlacklisted(chestName)
-    if chestBlacklist[chestName] and os.time() < chestBlacklist[chestName] then
-        return true
-    end
-    return false
-end
-
-local function warpToChest(targetPart)
+-- 1. ฟังก์ชันวาร์ปแบบปลอดภัยตามมาตรฐานของคุณ (ความเร็ว 30)
+local function warpToTarget(targetPart)
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return false end
     local hrp = LocalPlayer.Character.HumanoidRootPart
     
     local distance = (hrp.Position - targetPart.Position).Magnitude
-    local speed = 30 -- ความเร็วเซฟโซนตามมาตรฐาน
+    local speed = 30 -- ความเร็วเซฟโซนตามมาตรฐานของคุณ
     local duration = distance / speed
     
     local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
     local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetPart.CFrame * CFrame.new(0, 3, 0)})
     tween:Play()
     tween.Completed:Wait()
-    task.wait(0.2)
+    task.wait(0.1)
     return true
 end
 
-local function runChestFarm()
+-- 2. ฟังก์ชันหลักในการเข้าทำกล่องและจับเวลาสลายตัว
+local function interactWithChest(chest, prompt, targetPart)
+    if not targetPart or not targetPart:IsA("BasePart") then return end
+    local itemKey = targetPart.Position
+    
+    local arrived = warpToTarget(targetPart)
+    if arrived then
+        -- สั่งกดปุ่มจำลองรีโมทอีเว้นท์บนมือถือทันที
+        if prompt and prompt:IsA("ProximityPrompt") then
+            pcall(function() fireproximityprompt(prompt, 0) end)
+        end
+        
+        -- ลูปรอเช็คจนกว่ากล่องจะหายไป (สูงสุดสปีดไว 0.25 วินาที บอทจะได้ไม่ยืนแช่)
+        local timeOut = 0
+        while chest:IsDescendantOf(workspace) and AutoChestEnabled and timeOut < 0.25 do
+            task.wait(0.05)
+            timeOut = timeOut + 0.05
+            if prompt and prompt:IsA("ProximityPrompt") then
+                pcall(function() fireproximityprompt(prompt, 0) end)
+            end
+        end
+        
+        -- บันทึกจำคูลดาวน์พื้นที่นี้ไว้ 3 นาที (180 วินาที)
+        Cooldowns[itemKey] = os.time()
+        task.wait(0.02)
+    end
+end
+
+-- 3. ฟังก์ชันสแกนหาพิกัดพื้นที่ของ Chest ในโฟลเดอร์แบบ Dynamic
+local function findChestDynamic()
     local chestFolder = workspace:FindFirstChild("RuntimeCache") 
         and workspace.RuntimeCache:FindFirstChild("RuntimeCacheClient") 
         and workspace.RuntimeCache.RuntimeCacheClient:FindFirstChild("Chest")
 
-    if not chestFolder then return end
+    if not chestFolder then return nil, nil, nil end
 
     for _, chest in ipairs(chestFolder:GetChildren()) do
-        if not _G.AutoChestFarm then break end 
-        
         local root = chest:FindFirstChild("Root")
         local prompt = root and root:FindFirstChild("Prompt")
         
-        if root and prompt and not isBlacklisted(chest.Name) then
-            local arrived = warpToChest(root)
-            if arrived and _G.AutoChestFarm then
-                
-                task.spawn(function()
-                    fireproximityprompt(prompt)
-                end)
-                
-                local timeout = 0
-                while chest:IsDescendantOf(workspace) and _G.AutoChestFarm and timeout < 5 do
-                    task.wait(0.1)
-                    timeout = timeout + 0.1
+        if root and root:IsA("BasePart") then
+            local itemKey = root.Position
+            
+            -- เช็คระบบเวลาปลดล็อกคูลดาวน์ 3 นาที
+            if Cooldowns[itemKey] then
+                if os.time() - Cooldowns[itemKey] < 180 then
+                    continue 
+                else
+                    Cooldowns[itemKey] = nil 
                 end
-                
-                chestBlacklist[chest.Name] = os.time() + BLACKLIST_TIME
-                task.wait(0.3) 
             end
+            
+            return chest, prompt, root
         end
     end
+    return nil, nil, nil
 end
 
+-- 4. รวบตรรกะสร้างปุ่มสวิตช์และลูปการทำงานหลักไว้ในกระทู้คู่ขนานเดียวกัน
 task.spawn(function()
-    while true do
-        if _G.AutoChestFarm then
-            local success, err = pcall(runChestFarm)
-            if not success then
-                warn("Chest Farm Error: " .. tostring(err))
+    -- วนลูปรอจนกว่าหน้าต่าง UI หน้าบ้านจะโหลดเซ็ตค่าเสร็จ ไม่ให้บล็อกการอ่านโค้ดส่วนอื่น
+    while not _G.HxHDDD_MainTab do 
+        task.wait(0.5) 
+    end
+    local MainTab = _G.HxHDDD_MainTab
+
+    -- สร้างปุ่ม Toggle เสียบปลั๊กเข้าไปในระบบทันที
+    MainTab:AddToggle("AutoChestLoop", {
+        Title = "Auto Farm: Open Chest",
+        Description = "วาร์ปฟาร์มกล่องอัตโนมัติ พร้อมระบบติดคูลดาวน์เลี่ยงจุดเดิม 3 นาที (By.HxHDDD)",
+        Default = false,
+        Callback = function(Value)
+            AutoChestEnabled = Value
+            
+            -- เมื่อสวิตช์ถูกเปิด ให้สั่งลูปทำงานฟาร์มคู่ขนานทันที
+            if AutoChestEnabled then
+                task.spawn(function()
+                    while AutoChestEnabled do
+                        local chest, prompt, root = findChestDynamic()
+                        if chest and root then 
+                            interactWithChest(chest, prompt, root) 
+                        else 
+                            task.wait(0.3) -- พักสแกนสั้นๆ หากยังไม่มีกล่องเกิดในโฟลเดอร์
+                        end
+                        task.wait(0.02)
+                    end
+                end)
             end
         end
-        task.wait(1)
-    end
+    })
 end)
