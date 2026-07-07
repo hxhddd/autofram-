@@ -8,33 +8,41 @@ local LocalPlayer = Players.LocalPlayer
 local Cooldowns = {}
 local AutoChestEnabled = false
 
--- 1. ฟังก์ชันวาร์ปตัดพิกัดตรงๆ ไปตำแหน่งพิกัดโลกของ Root (Instant Warp ห้ามใช้ Layout ป้องกันตกแมพ)
+-- 1. ฟังก์ชันวาร์ปตัดพิกัดตรงๆ ไปตำแหน่งพิกัดโลกของ Root (Instant Warp)
 local function warpToTarget(rootPart)
     local character = LocalPlayer.Character
     local hrp = character and character:FindFirstChild("HumanoidRootPart")
     if not hrp then return false end
     
-    -- วาร์ปตัดพิกัดเข้าจุดกึ่งกลางของกล่องตรงๆ 
+    -- วาร์ปตัดพิกัดเข้าจุดกึ่งกลางของกล่องตรงๆ
     hrp.CFrame = rootPart.CFrame
-    task.wait(0.15) -- ดีเลย์เพื่อให้ระบบตัวเกมอัปเดตและรับรู้พิกัดใหม่
     return true
 end
 
--- 2. ฟังก์ชันหลักในการวาร์ป แช่ตัว และส่งสัญญาณจำลองกดปุ่ม E
+-- 2. ฟังก์ชันหลักในการวาร์ป ยืนรอดักฉากโหลด และรัวปุ่ม E จำนวน 5 ครั้ง
 local function interactWithChest(chest, rootPart)
     if not rootPart or not rootPart:IsA("BasePart") then return end
     local itemKey = rootPart.Position
     
     local arrived = warpToTarget(rootPart)
     if arrived then
-        -- 🔥 เปลี่ยนระบบกด: ใช้การจำลองการกดปุ่ม E บนแป้นพิมพ์ค้างไว้ (รองรับมือถือและแก้ปัญหากดไม่ติด)
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        -- 🔥 [แก้ปัญหาฉากโหลดไม่ทัน]: ยืนแช่นิ่งรอ 1.5 วินาที เพื่อให้ตัวเกมเคลียร์หน้าจอและโหลดวัตถุเสร็จก่อนกด
+        task.wait(1.5)
         
-        -- เงื่อนไข: สั่งให้ตัวละครยืนแช่นิ่งอยู่กับที่ตรงพิกัดกล่องนั้น 3 วินาทีเต็ม เพื่อให้ระบบเกมเปิดกล่องสำเร็จ
-        task.wait(3)
-        
-        -- ปล่อยปุ่ม E หลังจากยืนแช่ครบเวลาเรียบร้อยแล้ว
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+        -- 🔥 [ระบบรัวปุ่มซัพพอร์ต]: รัวกดปุ่ม E ทั้งหมด 5 ครั้ง เพื่อป้องกันปุ่มหลุด/กดไม่ติด
+        for i = 1, 5 do
+            if not AutoChestEnabled or not chest:IsDescendantOf(workspace) then break end
+            
+            -- จำลองการกดปุ่ม E (กดลง)
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+            task.wait(0.05) -- ดีเลย์สั้นๆ ระหว่างกดลง
+            
+            -- จำลองการปล่อยปุ่ม E (ยกขึ้น)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+            
+            -- ใช้ดีเลย์คูลดาวน์เว้นระยะ 0.2 วินาทีต่อครั้งตามสั่ง
+            task.wait(0.2)
+        end
         
         -- บันทึกจำพิกัดนี้ลงตารางคูลดาวน์ Blacklist ชั่วคราว 3 นาที (180 วินาที)
         Cooldowns[itemKey] = os.time()
@@ -53,7 +61,6 @@ local function findChestDynamic()
     for _, chest in ipairs(chestFolder:GetChildren()) do
         local root = chest:FindFirstChild("Root")
         
-        -- ตรวจสอบว่ามีชิ้นส่วน Root หลักเพื่อดึง CFrame โลกจริง
         if root and root:IsA("BasePart") then
             local itemKey = root.Position
             
@@ -72,7 +79,7 @@ local function findChestDynamic()
     return nil, nil
 end
 
--- 4. รวบตรรกะสร้างปุ่มสวิตช์และลูปการทำงานหลักไว้ในกระทู้คู่ขนานเดียวกัน เพื่อไม่ให้บล็อกโค้ดส่วนอื่น
+-- 4. รวบตรรกะสร้างปุ่มสวิตช์และลูปการทำงานหลักไว้ในกระทู้คู่ขนานเดียวกัน
 task.spawn(function()
     -- วนลูปรอจนกว่าหน้าต่าง UI หน้าบ้านจะโหลดเซ็ตค่าเสร็จสมบูรณ์
     while not _G.HxHDDD_MainTab do 
@@ -83,12 +90,11 @@ task.spawn(function()
     -- สร้างปุ่ม Toggle เสียบปลั๊กรวมเข้ากับหน้าต่างหลักทันที
     MainTab:AddToggle("AutoChestLoop", {
         Title = "Auto Farm: Open Chest",
-        Description = "วาร์ปตัดพิกัด Root จำลองกดปุ่ม E ยืนแช่ 3 วิ พร้อมคูลดาวน์ 3 นาที (By.HxHDDD)",
+        Description = "วาร์ปรอโหลดฉาก 1.5 วิ + รัวปุ่ม E 5 ครั้ง คูลดาวน์จุดเดิม 3 นาที (By.HxHDDD)",
         Default = false,
         Callback = function(Value)
             AutoChestEnabled = Value
             
-            -- เมื่อสวิตช์เปิดทำงาน ให้ระบบสแกนวาร์ปทำกล่องคู่ขนานทันที
             if AutoChestEnabled then
                 task.spawn(function()
                     while AutoChestEnabled do
