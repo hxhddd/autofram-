@@ -1,4 +1,4 @@
--- [[ 🛑 โซนที่ 1: Main Logic Loops (ตัวควบคุมเบื้องหลัง) 🛑 ]]
+-- [[ 🛑 โซนที่ 1: Main Logic & Auto Lake Farm 🛑 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -8,81 +8,85 @@ local BucketUsed = VerdantRemotes:WaitForChild("VDT_Bucket.Used")
 local BucketPoured = VerdantRemotes:WaitForChild("VDT_Bucket.Poured")
 local TokensTake = VerdantRemotes:WaitForChild("VDT_Tokens.Take")
 
--- Global Flags สำหรับให้ปุ่มสวิตช์ใน UI มาดึง/เปลี่ยนค่าสถานะ
-_G.AutoBucketUsed = false
-_G.AutoBucketPoured = false
-_G.AutoTokensTake = false
+-- ตัวแปรควบคุมสถานะปุ่มสลับ (แยกสวิตช์ทำงานอิสระพร้อมกันได้)
+local AutoBucketUsed = false
+local AutoBucketPoured = false
+local AutoTokensTake = false
 
--- รันลูปทั้ง 3 ชุดแยก Thread อิสระ (เปิดพร้อมกันได้ ไม่ขัดจังหวะกัน)
+-- รวบตรรกะสร้างปุ่มสวิตช์และลูปการทำงานหลักไว้ในกระทู้คู่ขนานเดียวกัน ตามมาตรฐานหน้าบ้านสำเร็จรูป
 task.spawn(function()
-    while true do
-        if _G.AutoBucketUsed then
-            pcall(function()
-                BucketUsed:FireServer()
-            end)
-        end
-        task.wait(0.1)
+    -- วนลูปรอจนกว่าหน้าต่าง UI หน้าบ้านจะโหลดเซ็ตค่าเสร็จสมบูรณ์
+    while not _G.HxHDDD_MainTab do 
+        task.wait(0.5) 
     end
-end)
+    local MainTab = _G.HxHDDD_MainTab
 
-task.spawn(function()
-    while true do
-        if _G.AutoBucketPoured then
-            pcall(function()
-                local args = {
-                    Workspace:WaitForChild("Scripted"):WaitForChild("CheckpointParts"):WaitForChild("1"):WaitForChild("Drain"):WaitForChild("Scripted"):WaitForChild("ProximityPosition"):WaitForChild("ProximityPrompt")
-                }
-                BucketPoured:FireServer(unpack(args))
-            end)
-        end
-        task.wait(0.1)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        if _G.AutoTokensTake then
-            pcall(function()
-                local args = {
-                    Workspace:WaitForChild("Scripted"):WaitForChild("CheckpointParts"):WaitForChild("1"):WaitForChild("Drain"):WaitForChild("Scripted"):WaitForChild("ProximityPosition"):WaitForChild("ProximityPrompt")
-                }
-                TokensTake:FireServer(unpack(args))
-            end)
-        end
-        task.wait(0.1)
-    end
-end)
-
----
-
--- [[ 🛑 โซนที่ 2: UI Connect Setup (คำสั่งเรียกสร้างปุ่มเข้า Fluent) 🛑 ]]
-
--- ฟังก์ชันสำหรับให้โค้ดหน้าบ้านเรียกใช้ โดยส่งอ็อบเจกต์ Tab ของ Fluent เข้ามา
--- เพื่อสั่งเสกปุ่มทุกลอจิกที่แยกกันให้ไปโผล่และทำงานร่วมกับระบบปุ่มย่อพับอัตโนมัติ
-function HookVerdantToggles(TargetTab)
-    
-    TargetTab:AddToggle("AutoBucketUsedToggle", {
+    -- ปุ่มที่ 1: Auto Use Bucket
+    MainTab:AddToggle("AutoBucketUsedLoop", {
         Title = "Auto Use Bucket",
+        Description = "ส่งคำสั่งใช้งานถังน้ำอัตโนมัติเป็นลูปแยกอิสระ (By.HxHDDD)",
         Default = false,
         Callback = function(Value)
-            _G.AutoBucketUsed = Value
+            AutoBucketUsed = Value
+            
+            if AutoBucketUsed then
+                task.spawn(function()
+                    while AutoBucketUsed do
+                        pcall(function()
+                            BucketUsed:FireServer()
+                        end)
+                        task.wait(0.1) -- เว้นระยะดีเลย์สั้นๆ ป้องกันโอเวอร์โหลด
+                    end
+                end)
+            end
         end
     })
 
-    TargetTab:AddToggle("AutoBucketPouredToggle", {
+    -- ปุ่มที่ 2: Auto Pour Bucket
+    MainTab:AddToggle("AutoBucketPouredLoop", {
         Title = "Auto Pour Bucket",
+        Description = "ส่งคำสั่งเทน้ำใส่ท่อระบายน้ำจุดเช็คพอยท์ 1 อัตโนมัติ (By.HxHDDD)",
         Default = false,
         Callback = function(Value)
-            _G.AutoBucketPoured = Value
+            AutoBucketPoured = Value
+            
+            if AutoBucketPoured then
+                task.spawn(function()
+                    while AutoBucketPoured do
+                        pcall(function()
+                            local args = {
+                                Workspace:WaitForChild("Scripted"):WaitForChild("CheckpointParts"):WaitForChild("1"):WaitForChild("Drain"):WaitForChild("Scripted"):WaitForChild("ProximityPosition"):WaitForChild("ProximityPrompt")
+                            }
+                            BucketPoured:FireServer(unpack(args))
+                        end)
+                        task.wait(0.1)
+                    end
+                end)
+            end
         end
     })
 
-    TargetTab:AddToggle("AutoTokensTakeToggle", {
+    -- ปุ่มที่ 3: Auto Take Tokens
+    MainTab:AddToggle("AutoTokensTakeLoop", {
         Title = "Auto Take Tokens",
+        Description = "ส่งคำสั่งเก็ปรับโทเคนจากจุดเช็คพอยท์ 1 อัตโนมัติ (By.HxHDDD)",
         Default = false,
         Callback = function(Value)
-            _G.AutoTokensTake = Value
+            AutoTokensTake = Value
+            
+            if AutoTokensTake then
+                task.spawn(function()
+                    while AutoTokensTake do
+                        pcall(function()
+                            local args = {
+                                Workspace:WaitForChild("Scripted"):WaitForChild("CheckpointParts"):WaitForChild("1"):WaitForChild("Drain"):WaitForChild("Scripted"):WaitForChild("ProximityPosition"):WaitForChild("ProximityPrompt")
+                            }
+                            TokensTake:FireServer(unpack(args))
+                        end)
+                        task.wait(0.1)
+                    end
+                end)
+            end
         end
     })
-
-end
+end)
