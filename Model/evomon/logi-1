@@ -1,27 +1,21 @@
 -- [[ 🛑 โซนที่ 3: Main Logic & Auto Chest Farm 🛑 ]]
 
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 -- ตารางคูลดาวน์ 3 นาที (180 วินาที) และสถานะปุ่ม
 local Cooldowns = {}
 local AutoChestEnabled = false
 
--- 1. ฟังก์ชันวาร์ปแบบปลอดภัยตามมาตรฐานของคุณ (ความเร็ว 30)
+-- 1. ฟังก์ชันวาร์ปตัดพิกัดตรงๆ แบบทันที (Instant Warp ไม่ต้องลอย)
 local function warpToTarget(targetPart)
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return false end
-    local hrp = LocalPlayer.Character.HumanoidRootPart
+    local character = LocalPlayer.Character
+    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
     
-    local distance = (hrp.Position - targetPart.Position).Magnitude
-    local speed = 30 -- ความเร็วเซฟโซนตามมาตรฐานของคุณ
-    local duration = distance / speed
-    
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetPart.CFrame * CFrame.new(0, 3, 0)})
-    tween:Play()
-    tween.Completed:Wait()
-    task.wait(0.1)
+    -- ตัดพิกัดวาร์ปไปเหนือหัวกล่อง 2 Studs ทันที
+    hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+    task.wait(0.05) -- ดีเลย์สั้นๆ เพื่อให้เซิร์ฟเวอร์อัปเดตตำแหน่งพิกัด
     return true
 end
 
@@ -37,7 +31,7 @@ local function interactWithChest(chest, prompt, targetPart)
             pcall(function() fireproximityprompt(prompt, 0) end)
         end
         
-        -- ลูปรอเช็คจนกว่ากล่องจะหายไป (สูงสุดสปีดไว 0.25 วินาที บอทจะได้ไม่ยืนแช่)
+        -- ลูปรอเช็คจนกว่ากล่องจะหายไป (สูงสุดสปีดไว 0.25 วินาที บอทจะได้ไม่ยืนแช่คาที่)
         local timeOut = 0
         while chest:IsDescendantOf(workspace) and AutoChestEnabled and timeOut < 0.25 do
             task.wait(0.05)
@@ -94,7 +88,7 @@ task.spawn(function()
     -- สร้างปุ่ม Toggle เสียบปลั๊กเข้าไปในระบบทันที
     MainTab:AddToggle("AutoChestLoop", {
         Title = "Auto Farm: Open Chest",
-        Description = "วาร์ปฟาร์มกล่องอัตโนมัติ พร้อมระบบติดคูลดาวน์เลี่ยงจุดเดิม 3 นาที (By.HxHDDD)",
+        Description = "วาร์ปตัดพิกัดเปิดกล่อง พร้อมระบบติดคูลดาวน์เลี่ยงจุดเดิม 3 นาที (By.HxHDDD)",
         Default = false,
         Callback = function(Value)
             AutoChestEnabled = Value
