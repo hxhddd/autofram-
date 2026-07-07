@@ -43,9 +43,10 @@ task.spawn(function()
     })
 
     -- ปุ่มที่ 2: Auto Pour Bucket
+        -- ปุ่มที่ 2: Auto Pour Bucket (เวอร์ชันอัปเกรด ค้นหาเช็คพอยท์อัตโนมัติตามตำแหน่งตัวเรา)
     MainTab:AddToggle("AutoBucketPouredLoop", {
         Title = "Auto Pour Bucket",
-        Description = "ส่งคำสั่งเทน้ำใส่ท่อระบายน้ำจุดเช็คพอยท์ 1 อัตโนมัติ (By.HxHDDD)",
+        Description = "เทน้ำใส่ท่อระบายน้ำตามเช็คพอยท์ที่อยู่ใกล้ที่สุดอัตโนมัติ (By.HxHDDD)",
         Default = false,
         Callback = function(Value)
             AutoBucketPoured = Value
@@ -54,10 +55,40 @@ task.spawn(function()
                 task.spawn(function()
                     while AutoBucketPoured do
                         pcall(function()
-                            local args = {
-                                Workspace:WaitForChild("Scripted"):WaitForChild("CheckpointParts"):WaitForChild("1"):WaitForChild("Drain"):WaitForChild("Scripted"):WaitForChild("ProximityPosition"):WaitForChild("ProximityPrompt")
-                            }
-                            BucketPoured:FireServer(unpack(args))
+                            -- 1. หาตำแหน่งของเราปัจจุบันก่อน
+                            local character = game:GetService("Players").LocalPlayer.Character
+                            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                            
+                            if hrp then
+                                local checkpointParts = Workspace:WaitForChild("Scripted"):WaitForChild("CheckpointParts")
+                                local closestPrompt = nil
+                                local shortestDistance = math.huge
+                                
+                                -- 2. วนลูปหาเช็คพอยท์ที่อยู่ใกล้ตัวเรามากที่สุดในขณะนั้น
+                                for _, checkpoint in ipairs(checkpointParts:GetChildren()) do
+                                    local drain = checkpoint:FindFirstChild("Drain")
+                                    if drain then
+                                        local prompt = drain:FindFirstChild("Scripted") 
+                                            and drain.Scripted:FindFirstChild("ProximityPosition") 
+                                            and drain.Scripted.ProximityPosition:FindFirstChild("ProximityPrompt")
+                                            
+                                        if prompt then
+                                            -- คำนวณระยะห่างระหว่างตัวเรากับจุดเทน้ำ
+                                            local distance = (hrp.Position - prompt.Parent.Position).Magnitude
+                                            if distance < shortestDistance then
+                                                shortestDistance = distance
+                                                closestPrompt = prompt
+                                            end
+                                        end
+                                    end
+                                end
+                                
+                                -- 3. ถ้าเจอจุดที่ใกล้ที่สุด ให้ส่งรีโมทเทน้ำไปที่จุดนั้นทันที
+                                if closestPrompt then
+                                    local args = { closestPrompt }
+                                    BucketPoured:FireServer(unpack(args))
+                                end
+                            end
                         end)
                         task.wait(0.1)
                     end
@@ -65,6 +96,7 @@ task.spawn(function()
             end
         end
     })
+
 
     -- ปุ่มที่ 3: Auto Take Tokens
     MainTab:AddToggle("AutoTokensTakeLoop", {
