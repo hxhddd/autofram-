@@ -11,5 +11,5 @@ task.spawn(function()
     task.wait(0.5) -- รอระบบ UI เซ็ตอัปโครงสร้าง 0.5 วินาที
     
     -- 3. โหลด Logic ฟาร์มหลักเข้ามาเสียบปลั๊กสร้างปุ่ม Toggle ทำงานร่วมกัน ทันที
-    loadstring(game:HttpGet("https://pastebin.com/raw/CLBftXDv"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/Model/drain-the-lake/logi-1"))()
 end)
