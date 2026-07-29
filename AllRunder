@@ -1,0 +1,52 @@
+-- [[ 🛑 โซนที่ 1: Loader รวมร่างแนวราบ 3-Combo By.HxHDDD 🛑 ]]
+-- Project: Event Farm Control v1.0 | Style: Modern Flat UI
+
+_G.ProjectName = "Event Farm Control"
+_G.ProjectVersion = "v1.0"
+
+task.spawn(function()
+    -- ตารางตรวจสอบ PlaceId (รองรับทั้ง PlaceId เดียว และ Multiple PlaceIds ในสล็อตเดียว)
+    local GamesList = {
+        [1]  = { PlaceIds = { 0000000000, 1111111111 }, LogicUrl = "https://pastebin.com/raw/xxxxxxxx" }, -- สำรอง 1 (รองรับ Multi PlaceId)
+        [2]  = { PlaceIds = { 0000000000 }, LogicUrl = "https://pastebin.com/raw/xxxxxxxx" },            -- สำรอง 2
+        [3]  = { PlaceIds = { 0000000000 }, LogicUrl = "https://pastebin.com/raw/xxxxxxxx" },            -- สำรอง 3
+        [4]  = { PlaceIds = { 0000000000 }, LogicUrl = "https://pastebin.com/raw/xxxxxxxx" },            -- สำรอง 4
+        [5]  = { PlaceIds = { 0000000000 }, LogicUrl = "https://pastebin.com/raw/xxxxxxxx" },            -- สำรอง 5
+        [6]  = { PlaceIds = { 0000000000 }, LogicUrl = "https://pastebin.com/raw/xxxxxxxx" },            -- สำรอง 6
+        [7]  = { PlaceIds = { 0000000000 }, LogicUrl = "https://pastebin.com/raw/xxxxxxxx" },            -- สำรอง 7
+        [8]  = { PlaceIds = { 0000000000 }, LogicUrl = "https://pastebin.com/raw/xxxxxxxx" },            -- สำรอง 8
+        [9]  = { PlaceIds = { 0000000000 }, LogicUrl = "https://pastebin.com/raw/xxxxxxxx" },            -- สำรอง 9
+        [10] = { PlaceIds = { 0000000000 }, LogicUrl = "https://pastebin.com/raw/xxxxxxxx" },            -- สำรอง 10
+    }
+
+    local CurrentPlaceId = game.PlaceId
+    local TargetLogicUrl = nil
+
+    -- 1. วนลูปเช็ค PlaceId (เช็คย่อยในตาราง PlaceIds ของแต่ละสล็อต)
+    for _, gameData in ipairs(GamesList) do
+        if type(gameData.PlaceIds) == "table" then
+            for _, id in ipairs(gameData.PlaceIds) do
+                if id == CurrentPlaceId then
+                    TargetLogicUrl = gameData.LogicUrl
+                    break
+                end
+            end
+        elseif gameData.PlaceIds == CurrentPlaceId then
+            TargetLogicUrl = gameData.LogicUrl
+        end
+        
+        if TargetLogicUrl then break end
+    end
+
+    -- 2. หากพบ PlaceId ที่ตรงกัน เริ่มโหลดตามลำดับมาตรฐาน
+    if TargetLogicUrl then
+        -- โหลด HxHDDD Library ตัวใหม่ (Raw Format)
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/hxhddd/autofram-/main/HxHDDD_Library"))()
+        task.wait(0.5)
+
+        -- โหลด Logic หลักของเกมเข้ามาร่วมทำงาน
+        loadstring(game:HttpGet(TargetLogicUrl))()
+    else
+        warn("HxHDDD Loader: ไม่พบ PlaceId ที่ตรงกับระบบ (" .. tostring(CurrentPlaceId) .. ")")
+    end
+end)
