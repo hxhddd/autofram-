@@ -1,0 +1,893 @@
+-- [[ 🛑 โซนที่ 1: HxHDDD UI Library Setup & Floating Button (Part 1/6) 🛑 ]]
+-- Credit: By.HxHDDD | Project: HxHDDD Library (Fluent Dark Transparent & Mobile Responsive)
+
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local HxHDDD = {
+    Themes = {
+        Main = Color3.fromRGB(18, 18, 24),        -- ดำโปร่งแสงสไตล์ Fluent
+        Secondary = Color3.fromRGB(28, 28, 38),   -- กรอบย่อยดำใส
+        Accent = Color3.fromRGB(0, 170, 255),     -- ฟ้าไฮไลต์
+        Text = Color3.fromRGB(255, 255, 255),
+        TextDark = Color3.fromRGB(170, 170, 180),
+        Outline = Color3.fromRGB(45, 45, 60),
+        Transparency = 0.15                        -- ค่าความโปร่งใสแบบ Glassmorphism
+    },
+    CurrentConfig = "Default",
+    ConfigFolder = "HxHDDD_Configs"
+}
+
+if not isfolder(HxHDDD.ConfigFolder) then
+    makefolder(HxHDDD.ConfigFolder)
+end
+
+-- ScreenGui หลัก
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "HxHDDD_UI_Base"
+ScreenGui.ResetOnSpawn = false
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = game:GetService("CoreGui")
+elseif gethui then
+    ScreenGui.Parent = gethui()
+else
+    ScreenGui.Parent = game:GetService("CoreGui")
+end
+
+-- 🔮 สร้างระบบปุ่มลอยย่อพับ (Floating Toggle Button) สำหรับมือถือในตัวสคริปต์
+local FloatBtn = Instance.new("TextButton")
+FloatBtn.Name = "HxHDDD_FloatBtn"
+FloatBtn.Size = UDim2.new(0, 45, 0, 45)
+FloatBtn.Position = UDim2.new(0, 15, 0.4, 0)
+FloatBtn.BackgroundColor3 = HxHDDD.Themes.Main
+FloatBtn.BackgroundTransparency = 0.2
+FloatBtn.Text = "🔮"
+FloatBtn.TextSize = 22
+FloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FloatBtn.Active = true
+FloatBtn.Draggable = true -- รองรับการลากย้ายตำแหน่งบนมือถือ
+FloatBtn.Parent = ScreenGui
+
+local FloatCorner = Instance.new("UICorner")
+FloatCorner.CornerRadius = UDim.new(1, 0) -- วงกลมสมบูรณ์
+FloatCorner.Parent = FloatBtn
+
+local FloatStroke = Instance.new("UIStroke")
+FloatStroke.Color = HxHDDD.Themes.Accent
+FloatStroke.Thickness = 1.5
+FloatStroke.Parent = FloatBtn
+-- [[ 🛑 โซนที่ 1: HxHDDD UI Library Setup & Core (Part 2/6) 🛑 ]]
+
+function HxHDDD:CreateWindow(hubTitle, hubVer)
+    hubTitle = hubTitle or "HxHDDD Library"
+    hubVer = hubVer or "v2.0"
+    
+    -- Main Frame รองรับจอมือถือ ไม่ใหญ่เกินขอบจอ
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 520, 0, 340)
+    MainFrame.Position = UDim2.new(0.5, -260, 0.5, -170)
+    MainFrame.BackgroundColor3 = HxHDDD.Themes.Main
+    MainFrame.BackgroundTransparency = HxHDDD.Themes.Transparency
+    MainFrame.BorderSizePixel = 0
+    MainFrame.ClipsDescendants = true
+    MainFrame.Parent = ScreenGui
+    
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 12)
+    UICorner.Parent = MainFrame
+
+    local MainStroke = Instance.new("UIStroke")
+    MainStroke.Color = HxHDDD.Themes.Outline
+    MainStroke.Thickness = 1
+    MainStroke.Parent = MainFrame
+    
+    -- Header Bar ด้านบน
+    local TopBar = Instance.new("Frame")
+    TopBar.Name = "TopBar"
+    TopBar.Size = UDim2.new(1, 0, 0, 40)
+    TopBar.BackgroundColor3 = HxHDDD.Themes.Secondary
+    TopBar.BackgroundTransparency = 0.3
+    TopBar.Parent = MainFrame
+    
+    local TopCorner = Instance.new("UICorner")
+    TopCorner.CornerRadius = UDim.new(0, 12)
+    TopCorner.Parent = TopBar
+    
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Size = UDim2.new(0, 350, 1, 0)
+    TitleLabel.Position = UDim2.new(0, 15, 0, 0)
+    TitleLabel.Text = "💎 " .. hubTitle .. " | " .. hubVer .. " (By.HxHDDD)"
+    TitleLabel.TextColor3 = HxHDDD.Themes.Text
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLabel.Font = Enum.Font.SourceSansBold
+    TitleLabel.TextSize = 16
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Parent = TopBar
+
+    -- ลอจิกกดปุ่มลอยเพื่อเปิด/ปิด UI
+    FloatBtn.MouseButton1Click:Connect(function()
+        MainFrame.Visible = not MainFrame.Visible
+    end)
+
+    -- ลอจิกลากเคลื่อนย้ายรองรับ Touch บนมือถือ
+    local dragging, dragStart, startPos
+    TopBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+        end
+    end)
+    TopBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    local Sidebar = Instance.new("Frame")
+    Sidebar.Name = "Sidebar"
+    Sidebar.Size = UDim2.new(0, 130, 1, -40)
+    Sidebar.Position = UDim2.new(0, 0, 0, 40)
+    Sidebar.BackgroundColor3 = HxHDDD.Themes.Secondary
+    Sidebar.BackgroundTransparency = 0.4
+    Sidebar.Parent = MainFrame
+
+    local TabContainer = Instance.new("ScrollingFrame")
+    TabContainer.Name = "TabContainer"
+    TabContainer.Size = UDim2.new(1, 0, 1, -45)
+    TabContainer.BackgroundTransparency = 1
+    TabContainer.ScrollBarThickness = 2
+    TabContainer.Parent = Sidebar
+
+    local TabUIList = Instance.new("UIListLayout")
+    TabUIList.SortOrder = Enum.SortOrder.LayoutOrder
+    TabUIList.Padding = UDim.new(0, 4)
+    TabUIList.Parent = TabContainer
+
+    local ContentContainer = Instance.new("Frame")
+    ContentContainer.Name = "ContentContainer"
+    ContentContainer.Size = UDim2.new(1, -135, 1, -40)
+    ContentContainer.Position = UDim2.new(0, 135, 0, 40)
+    ContentContainer.BackgroundTransparency = 1
+    ContentContainer.Parent = MainFrame
+
+    -- ตัวแปรสากลเชื่อมต่อ Logic หลังบ้าน
+    _G.HxHDDD_Window = MainFrame
+    _G.HxHDDD_TabContainer = TabContainer
+    _G.HxHDDD_ContentContainer = ContentContainer
+
+    HxHDDD:BuildSettingButton(Sidebar, ContentContainer)
+
+    return MainFrame
+end
+-- [[ 🛑 โซนที่ 1: HxHDDD UI Library Setup & Core (Part 3/6) 🛑 ]]
+
+function HxHDDD:SaveConfig(configName, dataTable)
+    configName = configName or "Default"
+    local path = HxHDDD.ConfigFolder .. "/" .. configName .. ".json"
+    local jsonStr = HttpService:JSONEncode(dataTable or {})
+    writefile(path, jsonStr)
+    HxHDDD:Notify("HxHDDD System", "บันทึก Config: " .. configName .. " เรียบร้อย!", 3)
+end
+
+function HxHDDD:LoadConfig(configName)
+    configName = configName or "Default"
+    local path = HxHDDD.ConfigFolder .. "/" .. configName .. ".json"
+    if isfile(path) then
+        local jsonStr = readfile(path)
+        local data = HttpService:JSONDecode(jsonStr)
+        HxHDDD:Notify("HxHDDD System", "โหลด Config: " .. configName .. " สำเร็จ!", 3)
+        return data
+    else
+        HxHDDD:Notify("HxHDDD System", "ไม่พบไฟล์ Config: " .. configName, 3)
+        return nil
+    end
+end
+
+function HxHDDD:BuildSettingButton(Sidebar, ContentContainer)
+    local SettingBtn = Instance.new("TextButton")
+    SettingBtn.Name = "SettingButton"
+    SettingBtn.Size = UDim2.new(1, -8, 0, 32)
+    SettingBtn.Position = UDim2.new(0, 4, 1, -36)
+    SettingBtn.BackgroundColor3 = HxHDDD.Themes.Main
+    SettingBtn.BackgroundTransparency = 0.2
+    SettingBtn.Text = "⚙️ Setting"
+    SettingBtn.TextColor3 = HxHDDD.Themes.Accent
+    SettingBtn.Font = Enum.Font.SourceSansBold
+    SettingBtn.TextSize = 13
+    SettingBtn.Parent = Sidebar
+    
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 6)
+    BtnCorner.Parent = SettingBtn
+
+    local SettingPage = Instance.new("ScrollingFrame")
+    SettingPage.Name = "SettingPage"
+    SettingPage.Size = UDim2.new(1, 0, 1, 0)
+    SettingPage.BackgroundTransparency = 1
+    SettingPage.Visible = false
+    SettingPage.ScrollBarThickness = 3
+    SettingPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+    SettingPage.Parent = ContentContainer
+
+    local PageList = Instance.new("UIListLayout")
+    PageList.SortOrder = Enum.SortOrder.LayoutOrder
+    PageList.Padding = UDim.new(0, 6)
+    PageList.Parent = SettingPage
+
+    -- Padding กันขอบล่างไม่ให้เลื่อนติดขอบบนมือถือ
+    local PagePadding = Instance.new("UIPadding")
+    PagePadding.PaddingTop = UDim.new(0, 6)
+    PagePadding.PaddingBottom = UDim.new(0, 15)
+    PagePadding.PaddingLeft = UDim.new(0, 5)
+    PagePadding.PaddingRight = UDim.new(0, 8)
+    PagePadding.Parent = SettingPage
+
+    PageList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        SettingPage.CanvasSize = UDim2.new(0, 0, 0, PageList.AbsoluteContentSize.Y + 25)
+    end)
+
+    SettingBtn.MouseButton1Click:Connect(function()
+        for _, child in pairs(ContentContainer:GetChildren()) do
+            if child:IsA("ScrollingFrame") then child.Visible = false end
+        end
+        SettingPage.Visible = true
+    end)
+
+    -- ช่องกรอกชื่อ Config
+    local ConfigInput = Instance.new("TextBox")
+    ConfigInput.Size = UDim2.new(1, 0, 0, 30)
+    ConfigInput.PlaceholderText = "พิมพ์ชื่อ Config ที่นี่..."
+    ConfigInput.Text = ""
+    ConfigInput.BackgroundColor3 = HxHDDD.Themes.Secondary
+    ConfigInput.TextColor3 = HxHDDD.Themes.Text
+    ConfigInput.Font = Enum.Font.SourceSans
+    ConfigInput.Parent = SettingPage
+
+    -- ปุ่ม Save Config
+    local SaveBtn = Instance.new("TextButton")
+    SaveBtn.Size = UDim2.new(1, 0, 0, 30)
+    SaveBtn.BackgroundColor3 = HxHDDD.Themes.Accent
+    SaveBtn.Text = "💾 Save Config"
+    SaveBtn.TextColor3 = HxHDDD.Themes.Text
+    SaveBtn.Font = Enum.Font.SourceSansBold
+    SaveBtn.Parent = SettingPage
+
+    SaveBtn.MouseButton1Click:Connect(function()
+        local name = ConfigInput.Text ~= "" and ConfigInput.Text or "Default"
+        HxHDDD:SaveConfig(name, { WalkSpeed = 16 })
+    end)
+
+    -- WalkSpeed Control
+    local SpeedTitle = Instance.new("TextLabel")
+    SpeedTitle.Size = UDim2.new(1, 0, 0, 20)
+    SpeedTitle.Text = "🏃 WalkSpeed Control (ปรับความเร็วตัวละคร)"
+    SpeedTitle.TextColor3 = HxHDDD.Themes.Text
+    SpeedTitle.Font = Enum.Font.SourceSansBold
+    SpeedTitle.BackgroundTransparency = 1
+    SpeedTitle.TextXAlignment = Enum.TextXAlignment.Left
+    SpeedTitle.Parent = SettingPage
+
+    local SpeedBox = Instance.new("TextBox")
+    SpeedBox.Size = UDim2.new(1, 0, 0, 30)
+    SpeedBox.Text = "16"
+    SpeedBox.BackgroundColor3 = HxHDDD.Themes.Secondary
+    SpeedBox.TextColor3 = HxHDDD.Themes.Accent
+    SpeedBox.Font = Enum.Font.SourceSansBold
+    SpeedBox.Parent = SettingPage
+
+    SpeedBox.FocusLost:Connect(function()
+        local val = tonumber(SpeedBox.Text)
+        if val and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = val
+        end
+    end)
+end
+-- [[ 🛑 โซนที่ 1: HxHDDD UI Library Setup & Core (Part 4/6) 🛑 ]]
+
+function HxHDDD:AddTab(tabData)
+    local tabName = (type(tabData) == "table" and tabData.Title) or tostring(tabData)
+    
+    local TabBtn = Instance.new("TextButton")
+    TabBtn.Size = UDim2.new(1, -8, 0, 28)
+    TabBtn.Position = UDim2.new(0, 4, 0, 0)
+    TabBtn.BackgroundColor3 = HxHDDD.Themes.Main
+    TabBtn.BackgroundTransparency = 0.4
+    TabBtn.Text = tabName
+    TabBtn.TextColor3 = HxHDDD.Themes.TextDark
+    TabBtn.Font = Enum.Font.SourceSans
+    TabBtn.TextSize = 13
+    TabBtn.Parent = _G.HxHDDD_TabContainer
+
+    local TabCorner = Instance.new("UICorner")
+    TabCorner.CornerRadius = UDim.new(0, 5)
+    TabCorner.Parent = TabBtn
+
+    local TabPage = Instance.new("ScrollingFrame")
+    TabPage.Name = tabName .. "_Page"
+    TabPage.Size = UDim2.new(1, 0, 1, 0)
+    TabPage.BackgroundTransparency = 1
+    TabPage.Visible = false
+    TabPage.ScrollBarThickness = 3
+    TabPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+    TabPage.Parent = _G.HxHDDD_ContentContainer
+
+    local PageList = Instance.new("UIListLayout")
+    PageList.SortOrder = Enum.SortOrder.LayoutOrder
+    PageList.Padding = UDim.new(0, 6)
+    PageList.Parent = TabPage
+
+    -- Padding กันขอบบน/ล่าง/ซ้าย/ขวา แก้ปัญหาเลื่อนติดขอบบนมือถือ 100%
+    local PagePadding = Instance.new("UIPadding")
+    PagePadding.PaddingTop = UDim.new(0, 6)
+    PagePadding.PaddingBottom = UDim.new(0, 20)
+    PagePadding.PaddingLeft = UDim.new(0, 5)
+    PagePadding.PaddingRight = UDim.new(0, 8)
+    PagePadding.Parent = TabPage
+
+    -- คำนวณความยาว Canvas อัตโนมัติตามจำนวนปุ่ม เพื่อให้ Scroll ได้ไม่ตกขอบ
+    PageList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        TabPage.CanvasSize = UDim2.new(0, 0, 0, PageList.AbsoluteContentSize.Y + 30)
+    end)
+
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, v in pairs(_G.HxHDDD_ContentContainer:GetChildren()) do
+            if v:IsA("ScrollingFrame") then v.Visible = false end
+        end
+        TabPage.Visible = true
+    end)
+
+    local Elements = {}
+
+    -- AddSection
+    function Elements:AddSection(sectionTitle)
+        local SecLabel = Instance.new("TextLabel")
+        SecLabel.Size = UDim2.new(1, 0, 0, 22)
+        SecLabel.Text = "--- " .. tostring(sectionTitle) .. " ---"
+        SecLabel.TextColor3 = HxHDDD.Themes.Accent
+        SecLabel.Font = Enum.Font.SourceSansBold
+        SecLabel.TextSize = 14
+        SecLabel.BackgroundTransparency = 1
+        SecLabel.Parent = TabPage
+    end
+
+    -- AddButton
+    function Elements:AddButton(btnText, callback)
+        callback = callback or function() end
+        local Btn = Instance.new("TextButton")
+        Btn.Size = UDim2.new(1, 0, 0, 32)
+        Btn.BackgroundColor3 = HxHDDD.Themes.Secondary
+        Btn.BackgroundTransparency = 0.3
+        Btn.Text = btnText
+        Btn.TextColor3 = HxHDDD.Themes.Text
+        Btn.Font = Enum.Font.SourceSansBold
+        Btn.Parent = TabPage
+
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(0, 6)
+        Corner.Parent = Btn
+
+        Btn.MouseButton1Click:Connect(function()
+            task.spawn(callback)
+        end)
+    end
+
+    -- AddToggle (Tickle)
+    function Elements:AddToggle(toggleName, callback)
+        callback = callback or function() end
+        local TglBtn = Instance.new("TextButton")
+        TglBtn.Size = UDim2.new(1, 0, 0, 35)
+        TglBtn.BackgroundColor3 = HxHDDD.Themes.Secondary
+        TglBtn.BackgroundTransparency = 0.3
+        TglBtn.Text = "  [ OFF ] " .. tostring(toggleName)
+        TglBtn.TextColor3 = HxHDDD.Themes.Text
+        TglBtn.TextXAlignment = Enum.TextXAlignment.Left
+        TglBtn.Font = Enum.Font.SourceSans
+        TglBtn.Parent = TabPage
+
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(0, 6)
+        Corner.Parent = TglBtn
+
+        local state = false
+        TglBtn.MouseButton1Click:Connect(function()
+            state = not state
+            if state then
+                TglBtn.Text = "  [ ON ] " .. tostring(toggleName)
+                TglBtn.TextColor3 = HxHDDD.Themes.Accent
+            else
+                TglBtn.Text = "  [ OFF ] " .. tostring(toggleName)
+                TglBtn.TextColor3 = HxHDDD.Themes.Text
+            end
+            -- ฝัง task.spawn แยก Thread อิสระตามมาตรฐานการควบคุมมือถือ
+            task.spawn(function()
+                callback(state)
+            end)
+        end)
+    end
+-- [[ 🛑 โซนที่ 1: HxHDDD UI Library Setup & Core (Part 5/6) 🛑 ]]
+
+    -- AddSlider
+    function Elements:AddSlider(sliderName, options, callback)
+        options = options or {}
+        local min = options.Min or 0
+        local max = options.Max or 100
+        local default = options.Default or min
+        callback = callback or function() end
+
+        local SliderFrame = Instance.new("Frame")
+        SliderFrame.Size = UDim2.new(1, 0, 0, 45)
+        SliderFrame.BackgroundColor3 = HxHDDD.Themes.Secondary
+        SliderFrame.BackgroundTransparency = 0.3
+        SliderFrame.Parent = TabPage
+
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(0, 6)
+        Corner.Parent = SliderFrame
+
+        local Title = Instance.new("TextLabel")
+        Title.Size = UDim2.new(1, -10, 0, 20)
+        Title.Position = UDim2.new(0, 8, 0, 2)
+        Title.Text = sliderName .. ": " .. tostring(default)
+        Title.TextColor3 = HxHDDD.Themes.Text
+        Title.Font = Enum.Font.SourceSans
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        Title.BackgroundTransparency = 1
+        Title.Parent = SliderFrame
+
+        local BarBack = Instance.new("TextButton")
+        BarBack.Size = UDim2.new(1, -16, 0, 10)
+        BarBack.Position = UDim2.new(0, 8, 0, 26)
+        BarBack.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        BarBack.Text = ""
+        BarBack.AutoButtonColor = false
+        BarBack.Parent = SliderFrame
+
+        local BarCorner = Instance.new("UICorner")
+        BarCorner.CornerRadius = UDim.new(1, 0)
+        BarCorner.Parent = BarBack
+
+        local BarFill = Instance.new("Frame")
+        BarFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+        BarFill.BackgroundColor3 = HxHDDD.Themes.Accent
+        BarFill.BorderSizePixel = 0
+        BarFill.Parent = BarBack
+
+        local FillCorner = Instance.new("UICorner")
+        FillCorner.CornerRadius = UDim.new(1, 0)
+        FillCorner.Parent = BarFill
+
+        local dragging = false
+        local function update(input)
+            local pos = math.clamp((input.Position.X - BarBack.AbsolutePosition.X) / BarBack.AbsoluteSize.X, 0, 1)
+            local val = math.floor(min + ((max - min) * pos))
+            BarFill.Size = UDim2.new(pos, 0, 1, 0)
+            Title.Text = sliderName .. ": " .. tostring(val)
+            task.spawn(function() callback(val) end)
+        end
+
+        BarBack.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                update(input)
+            end
+        end)
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                update(input)
+            end
+        end)
+    end
+
+    -- AddDropdown
+    function Elements:AddDropdown(dropName, options, callback)
+        options = options or {}
+        local list = options.List or {}
+        local default = options.Default or list[1] or "None"
+        callback = callback or function() end
+
+        local DropFrame = Instance.new("Frame")
+        DropFrame.Size = UDim2.new(1, 0, 0, 35)
+        DropFrame.BackgroundColor3 = HxHDDD.Themes.Secondary
+        DropFrame.BackgroundTransparency = 0.3
+        DropFrame.ClipsDescendants = true
+        DropFrame.Parent = TabPage
+
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(0, 6)
+        Corner.Parent = DropFrame
+
+        local DropBtn = Instance.new("TextButton")
+        DropBtn.Size = UDim2.new(1, 0, 0, 35)
+        DropBtn.Text = "  " .. dropName .. " : " .. tostring(default) .. "  ▼"
+        DropBtn.TextColor3 = HxHDDD.Themes.Text
+        DropBtn.Font = Enum.Font.SourceSans
+        DropBtn.TextXAlignment = Enum.TextXAlignment.Left
+        DropBtn.BackgroundTransparency = 1
+        DropBtn.Parent = DropFrame
+
+        local DropContainer = Instance.new("Frame")
+        DropContainer.Size = UDim2.new(1, -10, 0, 0)
+        DropContainer.Position = UDim2.new(0, 5, 0, 35)
+        DropContainer.BackgroundTransparency = 1
+        DropContainer.Parent = DropFrame
+
+        local DropList = Instance.new("UIListLayout")
+        DropList.Padding = UDim.new(0, 3)
+        DropList.Parent = DropContainer
+
+        local isOpen = false
+        DropBtn.MouseButton1Click:Connect(function()
+            isOpen = not isOpen
+            if isOpen then
+                local contentHeight = #list * 28
+                DropFrame.Size = UDim2.new(1, 0, 0, 40 + contentHeight)
+                DropBtn.Text = "  " .. dropName .. " : " .. tostring(default) .. "  ▲"
+            else
+                DropFrame.Size = UDim2.new(1, 0, 0, 35)
+                DropBtn.Text = "  " .. dropName .. " : " .. tostring(default) .. "  ▼"
+            end
+        end)
+
+        for _, item in pairs(list) do
+            local ItemBtn = Instance.new("TextButton")
+            ItemBtn.Size = UDim2.new(1, 0, 0, 25)
+            ItemBtn.BackgroundColor3 = HxHDDD.Themes.Main
+            ItemBtn.Text = tostring(item)
+            ItemBtn.TextColor3 = HxHDDD.Themes.TextDark
+            ItemBtn.Font = Enum.Font.SourceSans
+            ItemBtn.Parent = DropContainer
+
+            local ItemCorner = Instance.new("UICorner")
+            ItemCorner.CornerRadius = UDim.new(0, 4)
+            ItemCorner.Parent = ItemBtn
+
+            ItemBtn.MouseButton1Click:Connect(function()
+                default = item
+                DropBtn.Text = "  " .. dropName .. " : " .. tostring(default) .. "  ▼"
+                isOpen = false
+                DropFrame.Size = UDim2.new(1, 0, 0, 35)
+                task.spawn(function() callback(item) end)
+            end)
+        end
+    end
+
+    -- AddInput
+    function Elements:AddInput(inputName, options, callback)
+        options = options or {}
+        local placeholder = options.Placeholder or "พิมพ์ข้อความ..."
+        callback = callback or function() end
+
+        local InputFrame = Instance.new("Frame")
+        InputFrame.Size = UDim2.new(1, 0, 0, 35)
+        InputFrame.BackgroundColor3 = HxHDDD.Themes.Secondary
+        InputFrame.BackgroundTransparency = 0.3
+        InputFrame.Parent = TabPage
+
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(0, 6)
+        Corner.Parent = InputFrame
+
+        local Title = Instance.new("TextLabel")
+        Title.Size = UDim2.new(0.4, 0, 1, 0)
+        Title.Position = UDim2.new(0, 8, 0, 0)
+        Title.Text = inputName
+        Title.TextColor3 = HxHDDD.Themes.Text
+        Title.Font = Enum.Font.SourceSans
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        Title.BackgroundTransparency = 1
+        Title.Parent = InputFrame
+
+        local Box = Instance.new("TextBox")
+        Box.Size = UDim2.new(0.55, -8, 0, 25)
+        Box.Position = UDim2.new(0.45, 0, 0.5, -12)
+        Box.BackgroundColor3 = HxHDDD.Themes.Main
+        Box.PlaceholderText = placeholder
+        Box.Text = ""
+        Box.TextColor3 = HxHDDD.Themes.Accent
+        Box.Font = Enum.Font.SourceSansBold
+        Box.Parent = InputFrame
+
+        local BoxCorner = Instance.new("UICorner")
+        BoxCorner.CornerRadius = UDim.new(0, 4)
+        BoxCorner.Parent = Box
+
+        Box.FocusLost:Connect(function(enterPressed)
+            task.spawn(function() callback(Box.Text, enterPressed) end)
+        end)
+    end
+
+    -- AddKeybind
+    function Elements:AddKeybind(bindName, options, callback)
+        options = options or {}
+        local defaultKey = options.Default or Enum.KeyCode.RightControl
+        callback = callback or function() end
+
+        local BindFrame = Instance.new("Frame")
+        BindFrame.Size = UDim2.new(1, 0, 0, 35)
+        BindFrame.BackgroundColor3 = HxHDDD.Themes.Secondary
+        BindFrame.BackgroundTransparency = 0.3
+        BindFrame.Parent = TabPage
+
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(0, 6)
+        Corner.Parent = BindFrame
+
+        local Title = Instance.new("TextLabel")
+        Title.Size = UDim2.new(0.6, 0, 1, 0)
+        Title.Position = UDim2.new(0, 8, 0, 0)
+        Title.Text = bindName
+        Title.TextColor3 = HxHDDD.Themes.Text
+        Title.Font = Enum.Font.SourceSans
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        Title.BackgroundTransparency = 1
+        Title.Parent = BindFrame
+
+        local BindBtn = Instance.new("TextButton")
+        BindBtn.Size = UDim2.new(0.35, -8, 0, 25)
+        BindBtn.Position = UDim2.new(0.65, 0, 0.5, -12)
+        BindBtn.BackgroundColor3 = HxHDDD.Themes.Main
+        BindBtn.Text = defaultKey.Name
+        BindBtn.TextColor3 = HxHDDD.Themes.Accent
+        BindBtn.Font = Enum.Font.SourceSansBold
+        BindBtn.Parent = BindFrame
+
+        local BtnCorner = Instance.new("UICorner")
+        BtnCorner.CornerRadius = UDim.new(0, 4)
+        BtnCorner.Parent = BindBtn
+
+        local currentKey = defaultKey
+        local listening = false
+
+        BindBtn.MouseButton1Click:Connect(function()
+            listening = true
+            BindBtn.Text = "Press Key..."
+        end)
+
+        UserInputService.InputBegan:Connect(function(input, gpe)
+            if gpe then return end
+            if listening and input.UserInputType == Enum.UserInputType.Keyboard then
+                currentKey = input.KeyCode
+                BindBtn.Text = currentKey.Name
+                listening = false
+            elseif input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == currentKey then
+                task.spawn(function() callback(currentKey) end)
+            end
+        end)
+    end
+
+    -- AddColorpicker
+    function Elements:AddColorpicker(colorName, options, callback)
+        options = options or {}
+        local defaultColor = options.Default or Color3.fromRGB(0, 170, 255)
+        callback = callback or function() end
+
+        local ColorFrame = Instance.new("Frame")
+        ColorFrame.Size = UDim2.new(1, 0, 0, 35)
+        ColorFrame.BackgroundColor3 = HxHDDD.Themes.Secondary
+        ColorFrame.BackgroundTransparency = 0.3
+        ColorFrame.Parent = TabPage
+
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(0, 6)
+        Corner.Parent = ColorFrame
+
+        local Title = Instance.new("TextLabel")
+        Title.Size = UDim2.new(0.7, 0, 1, 0)
+        Title.Position = UDim2.new(0, 8, 0, 0)
+        Title.Text = colorName
+        Title.TextColor3 = HxHDDD.Themes.Text
+        Title.Font = Enum.Font.SourceSans
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        Title.BackgroundTransparency = 1
+        Title.Parent = ColorFrame
+
+        local ColorBox = Instance.new("TextButton")
+        ColorBox.Size = UDim2.new(0, 45, 0, 22)
+        ColorBox.Position = UDim2.new(1, -53, 0.5, -11)
+        ColorBox.BackgroundColor3 = defaultColor
+        ColorBox.Text = ""
+        ColorBox.Parent = ColorFrame
+
+        local BoxCorner = Instance.new("UICorner")
+        BoxCorner.CornerRadius = UDim.new(0, 4)
+        BoxCorner.Parent = ColorBox
+
+        ColorBox.MouseButton1Click:Connect(function()
+            local randomColor = Color3.fromRGB(math.random(0,255), math.random(0,255), math.random(0,255))
+            ColorBox.BackgroundColor3 = randomColor
+            task.spawn(function() callback(randomColor) end)
+        end)
+    end
+-- [[ 🛑 โซนที่ 1: HxHDDD UI Library Setup & Core (Part 6/6) 🛑 ]]
+
+    -- Add3DViewer (โชว์โมเดล 3D หมุนได้ 360 องศา)
+    function Elements:Add3DViewer(viewerTitle, targetModel, options)
+        options = options or {}
+        local autoRotate = options.AutoRotate ~= false
+        local cameraDistance = options.Distance or 5
+
+        local ViewContainer = Instance.new("Frame")
+        ViewContainer.Size = UDim2.new(1, 0, 0, 160)
+        ViewContainer.BackgroundColor3 = HxHDDD.Themes.Secondary
+        ViewContainer.BackgroundTransparency = 0.3
+        ViewContainer.Parent = TabPage
+
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(0, 8)
+        Corner.Parent = ViewContainer
+
+        local Title = Instance.new("TextLabel")
+        Title.Size = UDim2.new(1, -10, 0, 20)
+        Title.Position = UDim2.new(0, 8, 0, 4)
+        Title.Text = "🧊 " .. viewerTitle
+        Title.TextColor3 = HxHDDD.Themes.Accent
+        Title.Font = Enum.Font.SourceSansBold
+        Title.TextSize = 14
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        Title.BackgroundTransparency = 1
+        Title.Parent = ViewContainer
+
+        local Viewport = Instance.new("ViewportFrame")
+        Viewport.Size = UDim2.new(1, -16, 1, -30)
+        Viewport.Position = UDim2.new(0, 8, 0, 24)
+        Viewport.BackgroundTransparency = 1
+        Viewport.Parent = ViewContainer
+
+        local Camera = Instance.new("Camera")
+        Viewport.CurrentCamera = Camera
+        Camera.Parent = Viewport
+
+        if targetModel then
+            local modelClone = targetModel:Clone()
+            modelClone.Parent = Viewport
+
+            local primary = modelClone.PrimaryPart or modelClone:FindFirstChildWhichIsA("BasePart")
+            if primary then
+                local cf, size = modelClone:GetBoundingBox()
+                local angle = 0
+
+                RunService.RenderStepped:Connect(function(dt)
+                    if Viewport.Visible and autoRotate then
+                        angle = angle + dt * 45
+                        local rotCF = CFrame.Angles(0, math.rad(angle), 0)
+                        Camera.CFrame = CFrame.new(cf.Position) * rotCF * CFrame.new(0, 0, size.Y + cameraDistance)
+                        Camera.Focus = cf
+                    end
+                end)
+            end
+        end
+    end
+
+    -- AddCharacterPreview (โชว์โมเดลตัวละครผู้เล่นปัจจุบัน)
+    function Elements:AddCharacterPreview(previewTitle)
+        previewTitle = previewTitle or "Character Preview"
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        Elements:Add3DViewer(previewTitle, char, {AutoRotate = true, Distance = 3.5})
+    end
+
+    -- AddDisplay (Output Console Display)
+    function Elements:AddDisplay(labelTitle, defaultText)
+        defaultText = defaultText or "Waiting for output..."
+
+        local OutFrame = Instance.new("Frame")
+        OutFrame.Size = UDim2.new(1, 0, 0, 60)
+        OutFrame.BackgroundColor3 = HxHDDD.Themes.Secondary
+        OutFrame.BackgroundTransparency = 0.3
+        OutFrame.Parent = TabPage
+
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(0, 6)
+        Corner.Parent = OutFrame
+
+        local Title = Instance.new("TextLabel")
+        Title.Size = UDim2.new(1, -10, 0, 18)
+        Title.Position = UDim2.new(0, 8, 0, 2)
+        Title.Text = "📊 " .. labelTitle
+        Title.TextColor3 = HxHDDD.Themes.TextDark
+        Title.Font = Enum.Font.SourceSans
+        Title.TextSize = 12
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        Title.BackgroundTransparency = 1
+        Title.Parent = OutFrame
+
+        local TextDisplay = Instance.new("TextBox")
+        TextDisplay.Size = UDim2.new(1, -16, 0, 32)
+        TextDisplay.Position = UDim2.new(0, 8, 0, 22)
+        TextDisplay.BackgroundColor3 = HxHDDD.Themes.Main
+        TextDisplay.Text = tostring(defaultText)
+        TextDisplay.TextColor3 = Color3.fromRGB(0, 255, 170)
+        TextDisplay.Font = Enum.Font.Code
+        TextDisplay.TextSize = 12
+        TextDisplay.TextXAlignment = Enum.TextXAlignment.Left
+        TextDisplay.ClearTextOnFocus = false
+        TextDisplay.TextEditable = false
+        TextDisplay.Parent = OutFrame
+
+        local BoxCorner = Instance.new("UICorner")
+        BoxCorner.CornerRadius = UDim.new(0, 4)
+        BoxCorner.Parent = TextDisplay
+
+        local DisplayController = {}
+        function DisplayController:Set(newText)
+            TextDisplay.Text = tostring(newText)
+        end
+        return DisplayController
+    end
+
+    return Elements
+end
+
+-- HxHDDD Notify System
+function HxHDDD:Notify(title, msg, duration)
+    duration = duration or 3
+    local NotifFrame = Instance.new("Frame")
+    NotifFrame.Size = UDim2.new(0, 230, 0, 55)
+    NotifFrame.Position = UDim2.new(1, -240, 1, -65)
+    NotifFrame.BackgroundColor3 = HxHDDD.Themes.Secondary
+    NotifFrame.BackgroundTransparency = 0.2
+    NotifFrame.BorderSizePixel = 0
+    NotifFrame.Parent = ScreenGui
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 8)
+    Corner.Parent = NotifFrame
+
+    local NotifTitle = Instance.new("TextLabel")
+    NotifTitle.Size = UDim2.new(1, -10, 0, 18)
+    NotifTitle.Position = UDim2.new(0, 5, 0, 2)
+    NotifTitle.Text = title
+    NotifTitle.TextColor3 = HxHDDD.Themes.Accent
+    NotifTitle.Font = Enum.Font.SourceSansBold
+    NotifTitle.BackgroundTransparency = 1
+    NotifTitle.TextXAlignment = Enum.TextXAlignment.Left
+    NotifTitle.Parent = NotifFrame
+
+    local NotifMsg = Instance.new("TextLabel")
+    NotifMsg.Size = UDim2.new(1, -10, 0, 28)
+    NotifMsg.Position = UDim2.new(0, 5, 0, 20)
+    NotifMsg.Text = msg
+    NotifMsg.TextColor3 = HxHDDD.Themes.Text
+    NotifMsg.Font = Enum.Font.SourceSans
+    NotifMsg.BackgroundTransparency = 1
+    NotifMsg.TextXAlignment = Enum.TextXAlignment.Left
+    NotifMsg.TextWrapped = true
+    NotifMsg.Parent = NotifFrame
+
+    task.delay(duration, function()
+        NotifFrame:Destroy()
+    end)
+end
+
+-- HxHDDD Dialog System
+function HxHDDD:Dialog(title, msg, callback)
+    local DialogFrame = Instance.new("Frame")
+    DialogFrame.Size = UDim2.new(0, 260, 0, 120)
+    DialogFrame.Position = UDim2.new(0.5, -130, 0.5, -60)
+    DialogFrame.BackgroundColor3 = HxHDDD.Themes.Main
+    DialogFrame.BackgroundTransparency = 0.1
+    DialogFrame.Parent = ScreenGui
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 10)
+    Corner.Parent = DialogFrame
+end
+
+return HxHDDD
